@@ -48,6 +48,7 @@ class MainViewModel(private val repo: SiteRepository): ViewModel() {
     }
 }
 @Composable private fun ErrorView(message:String,retry:()->Unit){ Column(Modifier.padding(24.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){ Text("OpenMasjid", style=MaterialTheme.typography.headlineMedium, fontWeight=FontWeight.Bold); Text("We couldn't load your site's information."); Text(message, color=MaterialTheme.colorScheme.error); Button(onClick=retry){Text("Try again")} } }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun Home(site: Site, stale:Boolean, vm:MainViewModel) {
     var tab by remember { mutableIntStateOf(0) }; var detail by remember { mutableStateOf<Any?>(null) }; var showSettings by remember { mutableStateOf(false) }
     val campus = site.campuses.firstOrNull { it.id==vm.selectedCampus } ?: site.campuses.first(); LaunchedEffect(site){ if(vm.selectedCampus==null) vm.select(campus.id) }
