@@ -13,9 +13,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - name: Install Android SDK packages
-        run: sdkmanager 'platform-tools' 'platforms;android-35'
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager 'platform-tools' 'platforms;android-35'
       - name: Domain tests
         working-directory: apps/android
         run: ./gradlew :domain:test
