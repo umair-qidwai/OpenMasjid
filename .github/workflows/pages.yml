@@ -1,7 +1,6 @@
-name: Deploy static content to Pages
+name: Deploy static content to Pages (manual)
+# Optional hosting adapter. Never deploy until explicitly requested.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
