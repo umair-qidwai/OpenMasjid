@@ -43,7 +43,7 @@ class ContractTest {
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("assets/logo.svg", "//attacker.example/logo.svg")) }
     }
     @Test fun rejectsDuplicateTimetableDates() {
-        val row = Regex("\\\"timetable\\\":\\[(.*?)\\\]").find(fixture())?.groupValues?.get(1) ?: error("fixture timetable")
+        val row = Regex("\\\"timetable\\\":\\[(.*?)\\]").find(fixture())?.groupValues?.get(1) ?: error("fixture timetable")
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("\"timetable\":[$row]", "\"timetable\":[$row,$row]")) }
     }
     @Test fun rejectsDuplicateEventIds() {
