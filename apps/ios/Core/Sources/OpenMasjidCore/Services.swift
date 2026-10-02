@@ -9,9 +9,11 @@ public struct SiteConfiguration: Equatable {
         guard websiteBase.scheme?.lowercased() == "https", websiteBase.host != nil,
               websiteBase.user == nil, websiteBase.password == nil,
               websiteBase.query == nil, websiteBase.fragment == nil else { throw SiteError.invalid("Website base must be HTTPS") }
-        var normalized = websiteBase
-        normalized.path = websiteBase.path.isEmpty ? "/" : websiteBase.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/"
-        self.websiteBase = normalized
+        guard var normalized = URLComponents(url: websiteBase, resolvingAgainstBaseURL: false) else { throw SiteError.invalid("Invalid URL") }
+        let path = websiteBase.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        normalized.path = path.isEmpty ? "/" : "/" + path + "/"
+        guard let base = normalized.url else { throw SiteError.invalid("Invalid URL") }
+        self.websiteBase = base
     }
 }
 
