@@ -20,7 +20,7 @@ class ContractTest {
         val site = decodeSite(fixture())
         assertEquals(1, site.schemaVersion)
         assertEquals("demo-central", site.campuses.first().id)
-        assertEquals("uploaded", site.campuses.first().timetable.first().source)
+        assertEquals(Source.uploaded, site.campuses.first().timetable.first().source)
     }
     @Test fun rejectsUnknownFields() {
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("\"schemaVersion\": 1", "\"alien\": true, \"schemaVersion\": 1")) }
@@ -29,9 +29,9 @@ class ContractTest {
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("2026-10-01", "2026-02-30")) }
     }
     @Test fun rejectsInvalidUpdatedAtTimestamp() {
-        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("2026-10-01T12:00:00Z", "not-a-timestamp")) }
-        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("2026-10-01T12:00:00Z", "1899-12-31T12:00:00Z")) }
-        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("2026-10-01T12:00:00Z", "2026-10-01T12:00:00.123456789012345678901234567890Z")) }
+        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("2026-10-01T00:00:00Z", "not-a-timestamp")) }
+        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("2026-10-01T00:00:00Z", "1899-12-31T12:00:00Z")) }
+        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("2026-10-01T00:00:00Z", "2026-10-01T00:00:00.123456789012345678901234567890Z")) }
     }
     @Test fun rejectsUnsupportedSchema() {
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("\"schemaVersion\": 1", "\"schemaVersion\": 2")) }
@@ -43,12 +43,14 @@ class ContractTest {
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("assets/logo.svg", "//attacker.example/logo.svg")) }
     }
     @Test fun rejectsDuplicateTimetableDates() {
-        val row = Regex("\\\"timetable\\\":\\[(.*?)\\]").find(fixture())?.groupValues?.get(1) ?: error("fixture timetable")
-        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("\"timetable\":[$row]", "\"timetable\":[$row,$row]")) }
+        val site = decodeSite(fixture())
+        val campus = site.campuses.first()
+        val row = campus.timetable.first()
+        assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(campuses = listOf(campus.copy(timetable = listOf(row, row))))) }
     }
     @Test fun rejectsDuplicateEventIds() {
-        val event = "{\"id\":\"event-one\",\"title\":\"Event\",\"description\":\"Description\",\"startsAt\":\"2026-10-01T12:00:00Z\",\"endsAt\":\"2026-10-01T13:00:00Z\",\"campusIds\":[],\"location\":\"Hall\",\"category\":\"Community\"}"
-        val raw = fixture().replace("\"events\":[]", "\"events\":[$event,$event]")
-        assertThrows(IllegalArgumentException::class.java) { decodeSite(raw) }
+        val site = decodeSite(fixture())
+        val event = Event("event-one", "Event", "Description", "2026-10-01T12:00:00Z", "2026-10-01T13:00:00Z", emptyList(), "Hall", "Community")
+        assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(events = listOf(event, event))) }
     }
 }
