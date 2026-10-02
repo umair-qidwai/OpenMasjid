@@ -38,9 +38,13 @@ class MainViewModel(private val repo: SiteRepository): ViewModel() {
     fun saveUrl(url: String): Boolean = runCatching { repo.setUrl(url); true }.getOrDefault(false)
     fun repositoryBaseUrl(): String = repo.baseUrl()
 }
-@Composable fun OpenMasjidApp(vm: MainViewModel = viewModel(factory = object: androidx.lifecycle.ViewModelProvider.Factory { override fun <T: ViewModel> create(modelClass: Class<T>) = MainViewModel(SiteRepository(LocalContext.current)) as T })) {
+@Composable fun OpenMasjidApp(vm: MainViewModel? = null) {
+    val context = LocalContext.current
+    val model = vm ?: viewModel<MainViewModel>(factory = object: androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T: ViewModel> create(modelClass: Class<T>) = MainViewModel(SiteRepository(context)) as T
+    })
     MaterialTheme(colorScheme = lightColorScheme(primary=Color(0xFF183C34), secondary=Color(0xFFA67C43), background=Color(0xFFF6F3EC))) {
-        Surface(Modifier.fillMaxSize(), color=MaterialTheme.colorScheme.background) { when(val s=vm.state) { SiteState.Loading -> Box(Modifier.fillMaxSize().padding(24.dp)){ CircularProgressIndicator() }; is SiteState.Error -> ErrorView(s.message, vm::refresh); is SiteState.Ready -> Home(s.site,s.stale,vm) } }
+        Surface(Modifier.fillMaxSize(), color=MaterialTheme.colorScheme.background) { when(val s=model.state) { SiteState.Loading -> Box(Modifier.fillMaxSize().padding(24.dp)){ CircularProgressIndicator() }; is SiteState.Error -> ErrorView(s.message, model::refresh); is SiteState.Ready -> Home(s.site,s.stale,model) } }
     }
 }
 @Composable private fun ErrorView(message:String,retry:()->Unit){ Column(Modifier.padding(24.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){ Text("OpenMasjid", style=MaterialTheme.typography.headlineMedium, fontWeight=FontWeight.Bold); Text("We couldn't load your site's information."); Text(message, color=MaterialTheme.colorScheme.error); Button(onClick=retry){Text("Try again")} } }

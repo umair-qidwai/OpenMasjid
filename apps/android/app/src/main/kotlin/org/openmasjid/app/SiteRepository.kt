@@ -44,8 +44,9 @@ class SiteRepository(private val context: Context) {
             val target = URL(SiteConfig.endpoint(base)); connection = (target.openConnection() as HttpURLConnection).apply { connectTimeout=8_000; readTimeout=10_000; requestMethod="GET"; setRequestProperty("Accept","application/json"); if (force) setRequestProperty("Cache-Control", "no-cache") }
             connection.connect(); require(connection.responseCode in 200..299) { "Server returned ${connection.responseCode}" }
             require(connection.contentLengthLong <= 1_048_576L || connection.contentLengthLong < 0) { "Payload exceeds 1 MiB" }
-            val site = decodeSite(readBounded(connection.inputStream, 1_048_576))
-            prefs.edit().putString(cacheKey(base), kotlinx.serialization.json.Json.encodeToString(site)).apply()
+            val payload = readBounded(connection.inputStream, 1_048_576)
+            val site = decodeSite(payload)
+            prefs.edit().putString(cacheKey(base), payload).apply()
             SiteState.Ready(site, false)
         } catch (e: Exception) { if (old != null) SiteState.Ready(old, true) else SiteState.Error(e.message ?: "Unable to load site", null) }
         finally { connection?.disconnect() }
