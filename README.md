@@ -10,7 +10,7 @@ An open-source mosque website and native mobile toolkit. One organization, multi
 - **iOS:** native SwiftUI.
 - **Android:** native Kotlin / Jetpack Compose.
 - **Content:** validated JSON in `content/site.json`; published at `data/v1/site.json`.
-- **Publisher:** a small Cloudflare Worker handling GitHub App sign-in, authorization and commits. No database needed.
+- **Hosting and publisher:** one Cloudflare Worker deployment serves the static website/admin assets and handles GitHub App sign-in, authorization and commits. No database needed.
 
 Public visitors fetch static JSON, not the GitHub API. A publisher outage does not take the published website offline. Admin publishes are Git commits followed by a hosting deployment; a commit is **not** confirmation that the deployment is live.
 
@@ -45,7 +45,7 @@ Organization branding is shared. Each campus has its own address, timezone, pray
 
 Each mosque can own its GitHub repository, Cloudflare account, domain, and app-store accounts. An independently registered GitHub App keeps publishing independent too. An operator can offer managed deployments, but the v1 publisher is explicitly **single-repository**, not an unaudited multi-tenant service.
 
-Cloudflare Pages is the primary website target. GitHub Pages and ordinary static servers can serve the same export. GitHub Pages cannot execute the publisher; deploy it separately. Free plans have limits and may change. Custom domains and store distribution may cost money; OpenMasjid does not promise unlimited free infrastructure.
+Cloudflare Workers with Static Assets is the primary target: one project serves both the static website and `/api/*` publisher. GitHub Pages and ordinary static servers can still serve the export, but cannot execute the publisher without a separate backend. Free plans have limits and may change. Custom domains and store distribution may cost money; OpenMasjid does not promise unlimited free infrastructure.
 
 ## What is shared?
 

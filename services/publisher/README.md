@@ -1,6 +1,6 @@
 # OpenMasjid GitHub App publisher
 
-This Worker is the authenticated editor backend for one configured GitHub repository. It is not a deployment service: a successful response means only that GitHub accepted a commit. Verify the downstream Pages/build deployment before calling content live.
+This Worker is the authenticated editor backend for one configured GitHub repository. The same Cloudflare deployment also serves the built website through Workers Static Assets. A successful publish response means only that GitHub accepted a commit; verify the following Cloudflare build before calling content live.
 
 ## Register the GitHub App manually
 
@@ -16,6 +16,8 @@ This Worker is the authenticated editor backend for one configured GitHub reposi
 
 Required values are `APP_ORIGIN`, `GITHUB_OWNER`, `GITHUB_REPO`, `GITHUB_BRANCH`, `GITHUB_INSTALLATION_ID`, `GITHUB_APP_ID`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_PRIVATE_KEY`, and `SESSION_SECRET`. Use a long random `SESSION_SECRET`; changing it invalidates all cookies. Store secrets with `wrangler secret put`, not in `wrangler.toml` or source control:
 
+Run all Wrangler and deployment commands below from the repository root.
+
 ```text
 wrangler secret put APP_ORIGIN
 wrangler secret put GITHUB_OWNER
@@ -27,17 +29,17 @@ wrangler secret put GITHUB_CLIENT_ID
 wrangler secret put GITHUB_CLIENT_SECRET
 wrangler secret put GITHUB_PRIVATE_KEY
 wrangler secret put SESSION_SECRET
-wrangler deploy --config services/publisher/wrangler.toml
+npm run deploy:cloudflare
 ```
 
 The Worker owns `/api/*` and has no multi-tenant claim. Repository, branch, owner, and the fixed path `content/site.json` are server configuration; clients cannot override them. An unconfigured Worker returns 503 and never pretends to save.
 
 ## Same-origin routing
 
-Use a custom domain/route so the website and Worker share the exact `APP_ORIGIN`: route `/api/*` to this Worker and serve the static Pages site for the remaining paths. The admin uses same-origin `/api/` by default. If a Pages proxy is used instead, preserve the exact origin, cookies, `Origin`, and `X-CSRF-Token`; do not add wildcard CORS or insecure cookies.
+The root `wrangler.toml` deploys the website and publisher together. Static assets serve the website while `/api/*` runs the Worker, all under the same origin. Attach the custom domain to this single Worker and set `APP_ORIGIN` to its exact HTTPS origin. Do not add wildcard CORS or insecure cookies.
 
 ## Secure local development
 
-Use HTTPS on a local hostname (for example, a trusted `localhost` TLS proxy) because production cookies are Secure. Register that exact HTTPS callback temporarily in a development GitHub App, use a separate installation and secrets, and run `wrangler dev --local --config services/publisher/wrangler.toml`. Do not use production credentials or a public tunnel without rotating its secrets. The local proxy must map the website and `/api/*` to the same origin.
+Use HTTPS on a local hostname (for example, a trusted `localhost` TLS proxy) because production cookies are Secure. Register that exact HTTPS callback temporarily in a development GitHub App, use a separate installation and secrets, build the site, and run `wrangler dev --local`. Do not use production credentials or a public tunnel without rotating its secrets.
 
 The Worker enforces encrypted, authenticated HttpOnly Secure SameSite=Lax cookies, expiring OAuth state with PKCE, exact callback authority, exact Origin on state-changing routes, session-bound CSRF, bounded GitHub responses/timeouts, per-request user push authorization, optimistic SHA conflict detection, strict content validation, and generic error responses. Provider access tokens are held only inside the encrypted session cookie and expire no later than the provider expiry; they are never sent to browser JavaScript.

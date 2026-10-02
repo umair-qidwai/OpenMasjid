@@ -9,6 +9,7 @@
     "test:publisher": "vitest run tests/publisher",
     "content:publish": "tsx tools/publish-content.ts",
     "build": "npm run content:publish && npm run build --workspace @openmasjid/web",
+    "deploy:cloudflare": "npm run build && wrangler deploy",
     "dev": "npm run content:publish && npm run dev --workspace @openmasjid/web",
     "check": "tsc --noEmit",
     "test:e2e": "playwright test"

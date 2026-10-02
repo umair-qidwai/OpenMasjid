@@ -12,6 +12,6 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["tools/**/*.ts", "packages/core/src/**/*.ts", "tests/core/**/*.ts", "tests/web/**/*.ts"],
+  "include": ["tools/**/*.ts", "packages/core/src/**/*.ts", "services/publisher/src/**/*.ts", "tests/core/**/*.ts", "tests/web/**/*.ts", "tests/publisher/deployment.test.ts"],
   "exclude": ["node_modules", "apps/web/.astro", "apps/web/dist"]
 }

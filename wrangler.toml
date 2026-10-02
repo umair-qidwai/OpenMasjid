@@ -1,0 +1,15 @@
+name = "openmasjid"
+main = "services/publisher/src/app.ts"
+compatibility_date = "2026-01-01"
+workers_dev = true
+
+# The public website and admin UI are uploaded with this Worker. Static files
+# bypass Worker execution; only /api/* consumes Worker requests.
+[assets]
+directory = "apps/web/dist"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[vars]
+# Configure runtime values and secrets in Cloudflare after the first deploy.
+# Never commit GitHub credentials or SESSION_SECRET here.
