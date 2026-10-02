@@ -7,6 +7,24 @@ describe('strict site validation', () => {
     expect(validateSite(demo()).campuses).toHaveLength(2);
     expect(SiteSchema.safeParse(demo()).success).toBe(true);
   });
+  it('defaults donation to disabled for existing schema-v1 documents', () => {
+    const existing: any = demo();
+    delete existing.donation;
+    expect(validateSite(existing).donation).toEqual({ mode: 'none', externalUrl: null, customHtml: '' });
+  });
+  it('accepts one coherent donation mode and rejects unsafe or conflicting configuration', () => {
+    const external: any = demo();
+    external.donation = { mode: 'external', externalUrl: 'https://give.example.org/openmasjid', customHtml: '' };
+    expect(validateSite(external).donation.mode).toBe('external');
+    external.donation.externalUrl = 'http://give.example.org';
+    expect(() => validateSite(external)).toThrow();
+
+    const custom: any = demo();
+    custom.donation = { mode: 'custom', externalUrl: null, customHtml: '<form><button>Donate securely</button></form>' };
+    expect(validateSite(custom).donation.mode).toBe('custom');
+    custom.donation.externalUrl = 'https://give.example.org';
+    expect(() => validateSite(custom)).toThrow();
+  });
   it.each([
     ['unknown field', (s:any) => { s.organization.script = 'x'; }],
     ['unsafe website', (s:any) => { s.organization.website = 'javascript:alert(1)'; }],

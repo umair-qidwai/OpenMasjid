@@ -24,7 +24,15 @@ export const CampusSchema = z.object({
 const campusIds = z.array(id).max(20).refine(a => new Set(a).size === a.length, 'Duplicate campus references');
 export const EventSchema = z.object({id,title:text(200),description:text(10000),startsAt:timestamp,endsAt:timestamp,campusIds,location:text(300),category:text(80)}).strict().refine(e => Date.parse(e.endsAt) > Date.parse(e.startsAt), 'Event must end after it starts');
 export const AnnouncementSchema = z.object({id,title:text(200),body:text(10000),campusIds,publishedAt:timestamp,expiresAt:timestamp.nullable()}).strict().refine(a => a.expiresAt === null || Date.parse(a.expiresAt) > Date.parse(a.publishedAt), 'Expiry must follow publication');
-export const SiteSchema = z.object({schemaVersion:z.literal(1),updatedAt:timestamp,organization:z.object({name:text(200),tagline:text(300),description:text(20000),email,phone,website:https,logo,theme:z.object({accent:z.string().regex(/^#[\da-fA-F]{6}$/),background:z.string().regex(/^#[\da-fA-F]{6}$/)}).strict()}).strict(),campuses:z.array(CampusSchema).min(1).max(20),events:z.array(EventSchema).max(500),announcements:z.array(AnnouncementSchema).max(500)}).strict().superRefine((s,ctx) => {
+export const DonationSchema = z.object({
+ mode:z.enum(['none','external','custom']),externalUrl:https.nullable(),customHtml:z.string().max(100000)
+}).strict().superRefine((donation,ctx) => {
+ const issue = (path:string, message:string) => ctx.addIssue({code:z.ZodIssueCode.custom,path:[path],message});
+ if (donation.mode === 'none' && (donation.externalUrl !== null || donation.customHtml !== '')) issue('mode','Disabled donation configuration must be empty');
+ if (donation.mode === 'external' && (donation.externalUrl === null || donation.customHtml !== '')) issue('externalUrl','External donation mode requires only an HTTPS URL');
+ if (donation.mode === 'custom' && (donation.externalUrl !== null || donation.customHtml.trim().length === 0)) issue('customHtml','Custom donation mode requires only non-empty HTML');
+}).default({mode:'none',externalUrl:null,customHtml:''});
+export const SiteSchema = z.object({schemaVersion:z.literal(1),updatedAt:timestamp,organization:z.object({name:text(200),tagline:text(300),description:text(20000),email,phone,website:https,logo,theme:z.object({accent:z.string().regex(/^#[\da-fA-F]{6}$/),background:z.string().regex(/^#[\da-fA-F]{6}$/)}).strict()}).strict(),donation:DonationSchema,campuses:z.array(CampusSchema).min(1).max(20),events:z.array(EventSchema).max(500),announcements:z.array(AnnouncementSchema).max(500)}).strict().superRefine((s,ctx) => {
  const issue = (path:(string|number)[], message:string) => ctx.addIssue({code:z.ZodIssueCode.custom,path,message});
  for (const collection of ['campuses','events','announcements'] as const) { const seen = new Set<string>(); s[collection].forEach((v,i) => { if(seen.has(v.id)) issue([collection,i,'id'],'Duplicate ID'); seen.add(v.id); }); }
  const ids = new Set(s.campuses.map(c => c.id));

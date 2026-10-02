@@ -27,6 +27,12 @@ fun validateSite(site: Site) {
     require(validText(site.organization.name,200) && validText(site.organization.tagline,300) && validText(site.organization.description,20000) && validEmail(site.organization.email) && validText(site.organization.phone,40))
     require(site.organization.theme.accent.matches(hexRegex) && site.organization.theme.background.matches(hexRegex)) { "Theme colors must be hex" }
     requireHttps(site.organization.website); requireSafeLogo(site.organization.logo)
+    require(site.donation.customHtml.length <= 100_000) { "Donation HTML is too large" }
+    when (site.donation.mode) {
+        DonationMode.none -> require(site.donation.externalUrl == null && site.donation.customHtml.isEmpty()) { "Disabled donation configuration must be empty" }
+        DonationMode.external -> { require(site.donation.customHtml.isEmpty() && site.donation.externalUrl != null) { "External donation configuration is incomplete" }; requireHttps(site.donation.externalUrl) }
+        DonationMode.custom -> require(site.donation.externalUrl == null && site.donation.customHtml.isNotBlank()) { "Custom donation configuration is incomplete" }
+    }
     site.campuses.forEach { c ->
         require(validText(c.name,160) && validText(c.address,500) && validText(c.city,120) && validText(c.phone,40) && validEmail(c.email) && c.facilities.size <= 40 && c.facilities.all { validText(it,100) } && c.jumuah.size <= 10 && c.timetable.size <= 1500)
         require(c.timezone in ZoneId.getAvailableZoneIds()) { "Invalid timezone" }; require(c.latitude in -90.0..90.0 && c.longitude in -180.0..180.0)
@@ -61,7 +67,7 @@ fun getPrayerDay(site: Site, campusId: String, dateISO: String): PrayerDay? = si
 fun getCampusEvents(site: Site, campusId: String): List<Event> = site.events.filter { it.campusIds.isEmpty() || campusId in it.campusIds }.sortedBy { it.startsAt }
 fun getCampusAnnouncements(site: Site, campusId: String): List<Announcement> = site.announcements.filter { it.campusIds.isEmpty() || campusId in it.campusIds }.sortedByDescending { it.publishedAt }
     fun nextPrayer(campus: Campus, now: Instant): NextPrayer? {
-    val day = getPrayerDay(Site(1,"",Organization("","","","","","https://example.org","assets/logo.svg",Theme("#000000","#000000")), listOf(campus), emptyList(), emptyList()), campus.id, localDateISO(now,campus.timezone)) ?: return null
+    val day = getPrayerDay(Site(schemaVersion=1,updatedAt="",organization=Organization("","","","","","https://example.org","assets/logo.svg",Theme("#000000","#000000")),campuses=listOf(campus),events=emptyList(),announcements=emptyList()), campus.id, localDateISO(now,campus.timezone)) ?: return null
     val localNow = now.atZone(ZoneId.of(campus.timezone)).toLocalTime(); val values = listOf("Fajr" to day.fajr,"Dhuhr" to day.dhuhr,"Asr" to day.asr,"Maghrib" to day.maghrib,"Isha" to day.isha)
     val next = values.firstOrNull { LocalTime.parse(it.second).isAfter(localNow) } ?: return null
     val iq = day.iqamah ?: campus.iqamah; return NextPrayer(next.first,next.second,when(next.first){"Fajr"->iq.fajr;"Dhuhr"->iq.dhuhr;"Asr"->iq.asr;"Maghrib"->iq.maghrib;else->iq.isha})

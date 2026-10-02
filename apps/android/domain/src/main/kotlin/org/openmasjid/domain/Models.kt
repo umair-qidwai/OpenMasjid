@@ -5,10 +5,13 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class Site(
     val schemaVersion: Int, val updatedAt: String, val organization: Organization,
-    val campuses: List<Campus>, val events: List<Event>, val announcements: List<Announcement>
+    val campuses: List<Campus>, val events: List<Event>, val announcements: List<Announcement>,
+    val donation: Donation = Donation(DonationMode.none, null, "")
 )
 @Serializable data class Organization(val name: String, val tagline: String, val description: String, val email: String, val phone: String, val website: String, val logo: String, val theme: Theme)
 @Serializable data class Theme(val accent: String, val background: String)
+@Serializable enum class DonationMode { none, external, custom }
+@Serializable data class Donation(val mode: DonationMode, val externalUrl: String?, val customHtml: String)
 @Serializable data class Campus(
     val id: String, val name: String, val address: String, val city: String, val timezone: String,
     val latitude: Double, val longitude: Double, val phone: String, val email: String, val facilities: List<String>,

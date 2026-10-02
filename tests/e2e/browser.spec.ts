@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const screenshot = async (page: import('@playwright/test').Page, name: string) => {
-  await page.screenshot({ path: `test-results/${name}.png`, fullPage: true });
+  await page.screenshot({ path: `test-results/${name}.png`, fullPage: (page.viewportSize()?.width ?? 0) > 600 });
 };
 
 async function assertNoHorizontalOverflow(page: import('@playwright/test').Page) {
@@ -17,9 +17,14 @@ test.describe('public site browser UX', () => {
     const jsonResponse = await page.request.get('/data/v1/site.json');
     await page.goto('/');
     await expect(page).toHaveTitle(/OpenMasjid/);
-    await expect(page.getByRole('link', { name: 'OpenMasjid · Fictional Demo' })).toBeVisible();
+    await expect(page.locator('.site-header .brand')).toBeVisible();
     await expect(page.getByText('First gathering · 13:15')).toBeVisible();
     await expect(page.getByText('Second gathering · 14:15')).toBeVisible();
+    await expect(page.locator('.site-header').getByRole('link', { name: 'Donate' })).toHaveAttribute('href', /donate\/$/);
+    await expect(page.getByRole('link', { name: /Admin|Publisher admin/i })).toHaveCount(0);
+    for (const heading of ['Prayer times', 'Programs & services', 'Upcoming events', 'Announcements', 'Visit us']) {
+      await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+    }
     expect(jsonResponse.status()).toBe(200);
     await screenshot(page, 'public-home');
   });
@@ -82,10 +87,42 @@ test.describe('public site browser UX', () => {
   });
 });
 
+test.describe('donation page', () => {
+  test('shows a safe empty state by default', async ({ page }) => {
+    await page.goto('/donate/');
+    await expect(page.getByRole('heading', { name: 'Giving, made simple.' })).toBeVisible();
+    await expect(page.getByText('Online giving is not configured yet.')).toBeVisible();
+    await expect(page.locator('iframe')).toHaveCount(0);
+  });
+
+  test('renders custom markup only in an opaque sandboxed iframe', async ({ page }) => {
+    const response = await page.request.get('/data/v1/site.json');
+    const content = await response.json();
+    content.donation = { mode: 'custom', externalUrl: null, customHtml: '<main id="embedded-donation"><h2>Trusted form</h2><script>parent.document.body.dataset.compromised="yes"</script></main>' };
+    await page.route('**/data/v1/site.json', (route) => route.fulfill({ json: content }));
+    await page.goto('/donate/');
+    const frame = page.locator('iframe[title="Donation form"]');
+    await expect(frame).toHaveAttribute('sandbox', '');
+    await expect(page.locator('#embedded-donation')).toHaveCount(0);
+    await expect(frame.contentFrame().getByRole('heading', { name: 'Trusted form' })).toBeVisible();
+    await expect(page.locator('body')).not.toHaveAttribute('data-compromised', 'yes');
+  });
+});
+
 test.describe('admin editor browser UX', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/admin/');
     await expect(page.getByRole('heading', { name: 'Shape your community\'s front door.' })).toBeVisible();
+  });
+
+  test('configures an HTTPS donation destination in the local draft', async ({ page }) => {
+    await page.getByRole('button', { name: 'Giving' }).click();
+    await page.getByLabel('Donation mode').selectOption('external');
+    await page.getByLabel('External donation URL').fill('https://give.example.org/openmasjid');
+    await page.getByRole('button', { name: 'Save local draft' }).click();
+    await expect(page.locator('#editor-message')).toContainText('Saved locally');
+    const draft = await page.evaluate(() => JSON.parse(localStorage.getItem('openmasjid-draft') || '{}'));
+    expect(draft.donation).toEqual({ mode: 'external', externalUrl: 'https://give.example.org/openmasjid', customHtml: '' });
   });
 
   test('edits and removes a real event and announcement locally', async ({ page }) => {

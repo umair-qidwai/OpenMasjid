@@ -21,6 +21,11 @@ class ContractTest {
         assertEquals(1, site.schemaVersion)
         assertEquals("demo-central", site.campuses.first().id)
         assertEquals(Source.uploaded, site.campuses.first().timetable.first().source)
+        assertEquals(DonationMode.none, site.donation.mode)
+    }
+    @Test fun defaultsMissingDonationForSchemaV1() {
+        val old = fixture().replace(Regex("""\s*\"donation\"\s*:\s*\{[^}]*},?"""), "")
+        assertEquals(DonationMode.none, decodeSite(old).donation.mode)
     }
     @Test fun rejectsUnknownFields() {
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replace("\"schemaVersion\": 1", "\"alien\": true, \"schemaVersion\": 1")) }

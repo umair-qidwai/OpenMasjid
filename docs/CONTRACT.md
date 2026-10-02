@@ -48,6 +48,10 @@ POST /api/publish body `{ content: Site, sha: string }` -> `{ commitSha:string, 
 
 Static admin at /admin/ uses PUBLIC_PUBLISHER_URL optional absolute origin config; default same-origin `/api/`. The recommended Cloudflare deployment bundles static assets and the publisher in one Worker, with `/api/*` routed Worker-first. For cross-origin helpers exact allowed origin and credentials CORS needed; no wildcard. No fake successful publishing in demo mode. In unconfigured mode give setup instructions, content editor can offer explicit local import/export but cannot pretend to save remotely.
 
+## Donations
+
+`donation.mode` is one of `none`, `external`, or `custom`. Existing schema-v1 documents that omit `donation` decode as disabled on every client. Disabled mode requires an empty configuration. External mode requires one credential-free HTTPS URL. Custom mode stores bounded HTML, but the web app renders it only inside an opaque `sandbox=""` iframe: scripts, same-origin access, navigation, popups, and form submission are not granted. Never render custom donation HTML directly in the parent document.
+
 ## Design
 
 Warm ivory #f6f3ec, ink #183c34, muted brass #a67c43, serif editorial headings plus system sans UI. Refined whitespace; readable prayer timetable; clear next prayer/campus. Subtle arch motif through CSS geometry, no generic purple SaaS gradients. Scroll-driven reveal/parallax progressively enhanced; reduced-motion support, no scroll hijacking. Native iOS SwiftUI controls/materials and Android Material3 Compose. Keep time-critical information above decorative sections. Responsive 360px to large desktop, semantic keyboard-friendly 44px controls.

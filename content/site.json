@@ -11,6 +11,7 @@
     "logo": "assets/logo.svg",
     "theme": { "accent": "#183c34", "background": "#f6f3ec" }
   },
+  "donation": { "mode": "none", "externalUrl": null, "customHtml": "" },
   "campuses": [
     {
       "id": "demo-central",

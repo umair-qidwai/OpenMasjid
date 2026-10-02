@@ -32,6 +32,13 @@ function contentCard(kind, item, index, collection = 'event') {
 }
 
 function setPath(target, path, value) {
+  if (path === 'donation.mode') {
+    target.donation.mode = value;
+    if (value === 'none') { target.donation.externalUrl = null; target.donation.customHtml = ''; }
+    else if (value === 'external') target.donation.customHtml = '';
+    else if (value === 'custom') target.donation.externalUrl = null;
+    return;
+  }
   const parts = path.split('.');
   let cursor = target;
   for (const part of parts.slice(0, -1)) cursor = cursor[part];
@@ -39,6 +46,7 @@ function setPath(target, path, value) {
   if (key === 'facilities') cursor[key] = value.split(',').map((item) => item.trim()).filter(Boolean);
   else if (key === 'jumuah') cursor[key] = value.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => { const [label, time] = line.split('|'); return { label: label?.trim() ?? '', time: time?.trim() ?? '' }; });
   else if (key === 'campusIds') cursor[key] = value.split(',').map((item) => item.trim()).filter(Boolean);
+  else if (path === 'donation.externalUrl') cursor[key] = value.trim() || null;
   else if (key === 'expiresAt') cursor[key] = value.trim() || null;
   else if (['latitude', 'longitude'].includes(key)) cursor[key] = Number(value);
   else cursor[key] = value;
@@ -48,6 +56,9 @@ export function syncForm(state, form) {
   form.querySelectorAll('[data-path]').forEach((element) => setPath(state.content, element.dataset.path, element.value));
   const formFields = form.querySelectorAll('[name]');
   formFields.forEach((element) => setPath(state.content, element.name, element.value));
+  if (state.content.donation.mode === 'none') { state.content.donation.externalUrl = null; state.content.donation.customHtml = ''; }
+  else if (state.content.donation.mode === 'external') state.content.donation.customHtml = '';
+  else if (state.content.donation.mode === 'custom') state.content.donation.externalUrl = null;
   return validateSite(state.content);
 }
 
