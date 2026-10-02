@@ -18,7 +18,7 @@ Successes
 Not run / blockers
 
 - Playwright browser verification was not run. No 360px/desktop screenshots, keyboard interaction audit, overflow audit, or console-error audit is claimed.
-- Native iOS CI passed on GitHub run 37011396486: 11 Swift tests passed, XcodeGen generated the project, and the unsigned iPhone 15 simulator app build passed. This is a compiled simulator-target verification; no physical iPhone execution, signing, provisioning, or App Store archive was performed.
-- Native Android CI passed on GitHub run 37011396466: all 15 domain unit tests passed and `:app:assembleDebug` passed with Android SDK platform 35. This is a compile/package verification; no emulator or physical-device execution/install was performed.
+- Native iOS CI passed on GitHub run 37011930133: 11 Swift tests passed, XcodeGen generated the project, and the unsigned iPhone 15 simulator app build passed. This is a compiled simulator-target verification; no physical iPhone execution, signing, provisioning, or App Store archive was performed.
+- Native Android CI passed on GitHub run 37011930073: all 15 domain unit tests passed and `:app:assembleDebug` passed with Android SDK platform 35. This is a compile/package verification; no emulator or physical-device execution/install was performed.
 - `npm run test:publisher` remains outside this work's ownership boundary and was observed failing before these changes: `tests/publisher/publisher.test.ts` expected 503 but received 403. `services/publisher` and `tests/publisher` were not edited.
-- Native CI fixes were pushed directly to `main` in commits `ff8f39a`, `2c8e415`, `6c31c94`, `ec7ff94`, `94c2f25`, `b8a0de4`, `5c5f417`, and `1daf2b2`.
+- Native CI fixes were pushed directly to `main` in commits `ff8f39a`, `2c8e415`, `6c31c94`, `ec7ff94`, `94c2f25`, `b8a0de4`, `5c5f417`, `1daf2b2`, and `18a8c52`.
