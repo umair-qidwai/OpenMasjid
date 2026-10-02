@@ -33,7 +33,7 @@ xcodegen generate
 xcodebuild -project OpenMasjid.xcodeproj -scheme OpenMasjid -sdk iphonesimulator -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 15' build CODE_SIGNING_ALLOWED=NO
 ```
 
-For a local simulator run, open the generated project in Xcode, select an iPhone Simulator, and Run. For a physical device, connect and trust the device, select the OpenMasjid target, set an Apple Developer Team and unique bundle identifier under Signing & Capabilities, then Run with a development certificate/profile. Archive and App Store distribution require the signing and App Store Connect steps in the native README. Xcode, iOS SDK, simulator, Swift toolchain, signing, simulator execution, and physical-device execution are unverified here because this host is Linux.
+For a local simulator run, open the generated project in Xcode, select an iPhone Simulator, and Run. For a physical device, connect and trust the device, select the OpenMasjid target, set an Apple Developer Team and unique bundle identifier under Signing & Capabilities, then Run with a development certificate/profile. Archive and App Store distribution require the signing and App Store Connect steps in the native README. The native CI workflow verifies the Swift package and a real unsigned iPhone 15 simulator build on GitHub's macOS runner. That proves compilation and simulator-target linking, not execution on a physical iPhone. Physical-device execution, signing, provisioning, archive, and App Store submission remain unverified until run on a provisioned Mac/device.
 
 ### Android emulator and physical device
 
@@ -50,4 +50,4 @@ export JAVA_HOME="$PWD/.tooling/zulu17.68.203-ca-crac-jdk17.0.20.1-linux_aarch64
 
 For a local emulator, install Android SDK/platform 35, create/start an API 35 emulator in Android Studio or with the SDK tools, then run `./gradlew :app:installDebug`; launch OpenMasjid from the emulator. For a physical device, enable developer options and USB debugging, connect and authorize the device, confirm it with `adb devices`, then run `./gradlew :app:installDebug`. The bundled JDK is Linux ARM64; other architectures need a local Java 17 installation. Android compilation, emulator execution, physical-device installation, signing, and store upload are unverified in this session unless separately reported from a real run.
 
-The native apps use the published base URL and request `data/v1/site.json`; they are not WebViews. Release signing must remain local/CI-only and secrets must not be committed.
+The native CI workflow verifies 15 Android domain unit tests and `:app:assembleDebug` with Android SDK platform 35. That proves compilation and packaging, not installation or execution on an emulator or physical device. The native apps use the published base URL and request `data/v1/site.json`; they are not WebViews. Release signing must remain local/CI-only and secrets must not be committed.
