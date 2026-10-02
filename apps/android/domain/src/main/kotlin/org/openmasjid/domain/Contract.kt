@@ -50,7 +50,7 @@ private fun requireTimestamp(s: String) {
 }
 private fun validText(s: String, max: Int) = s.isNotBlank() && s.length <= max
 private fun validEmail(s: String) = s.length <= 254 && Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$").matches(s)
-private fun requireHttps(s: String) { val u = runCatching { java.net.URI(s) }.getOrNull(); require(s.length <= 2048 && u?.scheme.equals("https", true) && u.userInfo == null && u.host != null && !s.any { it.isWhitespace() || it == '\\' }) { "HTTPS URL required" } }
+private fun requireHttps(s: String) { val u = runCatching { java.net.URI(s) }.getOrNull(); require(s.length <= 2048 && u != null && u.scheme.equals("https", true) && u.userInfo == null && u.host != null && !s.any { it.isWhitespace() || it == '\\' }) { "HTTPS URL required" } }
 private fun requireSafeLogo(s: String) {
     val relative = Regex("^/?[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*\\.(svg|png|webp|jpg|jpeg|avif)$", RegexOption.IGNORE_CASE)
     if (s.startsWith("https://")) requireHttps(s) else require(relative.matches(s)) { "Unsafe logo URL" }
