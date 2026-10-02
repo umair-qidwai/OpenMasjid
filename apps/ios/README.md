@@ -27,4 +27,4 @@ The deployed website base is configured in the app's Settings screen. It must be
 3. Select a real device or **Any iOS Device (arm64)**, choose Product → Archive, then in Organizer choose Validate App and Distribute App → App Store Connect. Complete the App Store Connect listing, privacy answers, screenshots, and review submission.
 4. For ad-hoc or enterprise distribution, select the matching distribution method and provisioning profile instead of App Store Connect.
 
-This environment is Linux (Raspberry Pi) and has no Xcode, iOS SDK, simulator, or Swift toolchain, so the commands above could not be executed here. Run them on macOS before signing or submission.
+GitHub macOS CI passed 11 Swift tests and an unsigned iPhone 15 simulator build at commit `efebf748`. Physical-device execution, signing and submission remain manual. See `../../docs/TESTING.md` for complete installation and test steps.

@@ -7,14 +7,14 @@ Native Kotlin + Jetpack Compose Material 3 client for a published OpenMasjid sit
 From this directory:
 
 ```bash
-export JAVA_HOME="$PWD/.tooling/zulu17.68.203-ca-crac-jdk17.0.20.1-linux_aarch64"
+# Set JAVA_HOME to your installed Java 17 JDK; configure Android SDK in Android Studio.
 ./gradlew test
 ./gradlew :domain:test
 ./gradlew :app:assembleDebug       # requires Android SDK + platform 35
 ./gradlew :app:installDebug        # requires an attached emulator/device
 ```
 
-The bundled JDK is for Linux ARM64. On another architecture, set `JAVA_HOME` to a local Java 17 installation. Gradle wrapper and plugin versions are pinned in the existing scaffold. Settings stores a website base such as `https://example.org`; the repository appends `/data/v1/site.json` exactly.
+No JDK is bundled in Git. Set `JAVA_HOME` to your local Java 17 installation. Gradle wrapper and plugin versions are pinned in the existing scaffold. Settings stores a website base such as `https://example.org`; the repository appends `/data/v1/site.json` exactly.
 
 ## Data and offline behavior
 
