@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-01T00:00:00Z",
+  "organization": {
+    "name": "OpenMasjid · Fictional Demo",
+    "tagline": "A place to belong",
+    "description": "Fictional sample content for development only. This is not a live mosque or an authoritative prayer schedule.",
+    "email": "hello@example.org",
+    "phone": "+1 555 0100",
+    "website": "https://example.org",
+    "logo": "assets/logo.svg",
+    "theme": { "accent": "#183c34", "background": "#f6f3ec" }
+  },
+  "campuses": [
+    {
+      "id": "demo-central",
+      "name": "Central · Fictional Demo",
+      "address": "100 Example Lane (fictional)",
+      "city": "Demo City",
+      "timezone": "America/New_York",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "phone": "+1 555 0100",
+      "email": "hello@example.org",
+      "facilities": ["Prayer hall", "Accessible entrance", "Family space"],
+      "calculation": { "method": "NorthAmerica", "madhab": "Shafi" },
+      "iqamah": { "fajr": "06:15", "dhuhr": "13:30", "asr": "16:30", "maghrib": "18:45", "isha": "20:00" },
+      "jumuah": [{ "label": "First gathering", "time": "13:15" }, { "label": "Second gathering", "time": "14:15" }],
+      "timetable": []
+    },
+    {
+      "id": "demo-riverside",
+      "name": "Riverside · Fictional Demo",
+      "address": "200 Sample River Road (fictional)",
+      "city": "Demo City",
+      "timezone": "America/Chicago",
+      "latitude": 41.8781,
+      "longitude": -87.6298,
+      "phone": "+1 555 0101",
+      "email": "hello@example.org",
+      "facilities": ["Prayer hall", "Parking"],
+      "calculation": { "method": "NorthAmerica", "madhab": "Hanafi" },
+      "iqamah": { "fajr": "06:20", "dhuhr": "13:30", "asr": "17:00", "maghrib": "18:45", "isha": "20:15" },
+      "jumuah": [{ "label": "Jumuah", "time": "13:15" }],
+      "timetable": []
+    }
+  ],
+  "events": [{
+    "id": "demo-open-house",
+    "title": "Community open house · Demo",
+    "description": "A fictional gathering to discover our community. This is sample content, not a real event.",
+    "startsAt": "2026-10-04T11:00:00-04:00",
+    "endsAt": "2026-10-04T13:00:00-04:00",
+    "campusIds": [],
+    "location": "Demo community hall",
+    "category": "Community"
+  }],
+  "announcements": [{
+    "id": "demo-welcome",
+    "title": "Welcome to the fictional demo",
+    "body": "All bundled addresses, gatherings, and prayer times are illustrative. Do not rely on this demo for worship.",
+    "campusIds": [],
+    "publishedAt": "2026-10-01T00:00:00Z",
+    "expiresAt": null
+  }]
+}

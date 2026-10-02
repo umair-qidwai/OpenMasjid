@@ -1,0 +1,25 @@
+{
+  "name": "openmasjid",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/web", "packages/core", "services/publisher"],
+  "scripts": {
+    "test": "vitest run",
+    "test:publisher": "vitest run tests/publisher",
+    "content:publish": "tsx tools/publish-content.ts",
+    "build": "npm run content:publish && npm run build --workspace @openmasjid/web",
+    "dev": "npm run content:publish && npm run dev --workspace @openmasjid/web",
+    "check": "tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": { "zod": "^3.25.76", "adhan": "^4.4.3" },
+  "engines": { "node": ">=22" }
+}

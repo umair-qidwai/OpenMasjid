@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-01T00:00:00Z",
+  "organization": {
+    "name": "OpenMasjid \u00b7 Fictional Demo",
+    "tagline": "A place to belong",
+    "description": "Fictional sample content. Not a live mosque or authoritative prayer schedule.",
+    "email": "hello@example.org",
+    "phone": "+1 555 0100",
+    "website": "https://example.org",
+    "logo": "assets/logo.svg",
+    "theme": {
+      "accent": "#183c34",
+      "background": "#f6f3ec"
+    }
+  },
+  "campuses": [
+    {
+      "id": "demo-central",
+      "name": "Central \u00b7 Demo",
+      "address": "100 Example Lane (fictional)",
+      "city": "Demo City",
+      "timezone": "America/New_York",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "phone": "+1 555 0100",
+      "email": "hello@example.org",
+      "facilities": [
+        "Prayer hall",
+        "Accessible entrance",
+        "Family space"
+      ],
+      "calculation": {
+        "method": "NorthAmerica",
+        "madhab": "Shafi"
+      },
+      "iqamah": {
+        "fajr": "06:15",
+        "dhuhr": "13:30",
+        "asr": "16:30",
+        "maghrib": "18:45",
+        "isha": "20:00"
+      },
+      "jumuah": [
+        {
+          "label": "First gathering",
+          "time": "13:15"
+        },
+        {
+          "label": "Second gathering",
+          "time": "14:15"
+        }
+      ],
+      "timetable": [
+        {
+          "date": "2026-10-01",
+          "fajr": "05:45",
+          "sunrise": "06:50",
+          "dhuhr": "12:45",
+          "asr": "16:00",
+          "maghrib": "18:35",
+          "isha": "19:45",
+          "source": "uploaded",
+          "iqamah": {
+            "fajr": "06:20",
+            "dhuhr": "13:30",
+            "asr": "16:30",
+            "maghrib": "18:45",
+            "isha": "20:00"
+          }
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "demo-open-house",
+      "title": "Community open house \u00b7 Demo",
+      "description": "A fictional gathering to discover our community, share a meal, and meet your neighbours. This is sample content, not a real event.",
+      "startsAt": "2026-10-04T11:00:00-04:00",
+      "endsAt": "2026-10-04T13:00:00-04:00",
+      "campusIds": [],
+      "location": "Demo community hall",
+      "category": "Community"
+    }
+  ],
+  "announcements": [
+    {
+      "id": "demo-welcome",
+      "title": "Welcome to the fictional demo",
+      "body": "Connect your own published OpenMasjid HTTPS website in Settings. All bundled addresses, gatherings, and prayer times are examples only.",
+      "campusIds": [],
+      "publishedAt": "2026-01-01T00:00:00Z",
+      "expiresAt": null
+    }
+  ]
+}

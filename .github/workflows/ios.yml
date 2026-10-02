@@ -1,0 +1,21 @@
+name: Native iOS verification
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Swift package
+        run: swift test --package-path apps/ios/Core
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: apps/ios
+        run: xcodegen generate
+      - name: Build simulator target
+        working-directory: apps/ios
+        run: xcodebuild -project OpenMasjid.xcodeproj -scheme OpenMasjid -sdk iphonesimulator -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 15' build CODE_SIGNING_ALLOWED=NO

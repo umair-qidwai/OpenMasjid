@@ -1,0 +1,9 @@
+{
+  "name": "@openmasjid/publisher",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": { "test": "vitest run" },
+  "dependencies": { "@openmasjid/core": "file:../../packages/core" },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}
