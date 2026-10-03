@@ -1,5 +1,23 @@
 import { test, expect } from '@playwright/test';
 
+test('typing clears the last letter before starting the next word', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.clock.install({ time: new Date('2026-10-03T12:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-03T12:01:00Z'));
+  await page.goto('/');
+  const text = page.locator('.type-line');
+  // Observe a full cycle so every word transition, including wraparound, is covered.
+  const states: string[] = [];
+  for (let i = 0; i < 180; i++) {
+    await page.clock.runFor(100);
+    const value = await text.textContent() ?? '';
+    if (value !== states.at(-1)) states.push(value);
+  }
+  for (const first of ['w', 'g', 'b']) {
+    expect(states.some((value, index) => value === first && states[index - 1] === '')).toBe(true);
+  }
+});
+
 test('mosque service cards are centered, readable and responsive', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
