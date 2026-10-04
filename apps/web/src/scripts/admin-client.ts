@@ -45,7 +45,7 @@ document.querySelector('#add-event').addEventListener('click', () => { state.con
 document.querySelector('#add-announcement').addEventListener('click', () => { state.content.announcements.push({id:`announcement-${Date.now()}`,title:'New announcement',body:'',campusIds:[],publishedAt:new Date().toISOString(),expiresAt:null}); buildEditor(state,document.querySelector('#campus-editor'),document.querySelector('#content-editor')); });
 editor.addEventListener('input', () => { state.dirty = true; message.textContent='Unsaved local changes'; });
 editor.addEventListener('submit',(e)=>{e.preventDefault(); try { syncForm(state, editor); localStorage.setItem('openmasjid-draft',JSON.stringify(state.content)); state.dirty=false; message.textContent='Saved locally · validated, not published'; } catch (error) { message.textContent=`Save rejected: ${error.message}`; }});
-document.querySelector('#export-json').addEventListener('click',()=>exportDraft(state.content));
+document.querySelector('#export-json').addEventListener('click', () => { try { syncForm(state, editor); exportDraft(state.content); } catch (error) { message.textContent = `Export rejected: ${error.message}`; } });
 document.querySelector('#import-json').addEventListener('change',(e)=>importJson(e.target.files[0],state,()=>{buildEditor(state,document.querySelector('#campus-editor'),document.querySelector('#content-editor'));applyOrganizationDraft();},message));
 document.querySelector('#import-csv').addEventListener('change',(e)=>importCsv(e.target.files[0],state,message));
 document.querySelector('#publish').addEventListener('click',()=>publishDraft(state,message,editor));

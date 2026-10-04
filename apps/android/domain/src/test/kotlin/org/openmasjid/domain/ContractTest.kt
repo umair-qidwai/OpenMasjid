@@ -16,6 +16,21 @@ class ContractTest {
         assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(announcements = listOf(announcement.copy(campusIds = announcement.campusIds + announcement.campusIds)))) }
         assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(announcements = listOf(announcement.copy(publishedAt = "1800-10-01T12:00:00Z")))) }
     }
+    @Test fun acceptsAdditivePrograms() {
+        val raw = fixture().replaceFirst("{", """{"programs":[{"id":"prayer","title":"Prayer","description":"Fictional","campusIds":["demo-central"]}],""")
+        assertEquals(1, decodeSite(raw).schemaVersion)
+    }
+    @Test fun programsDefaultAndValidation() {
+        val site = decodeSite(fixture())
+        assertTrue(site.programs.isEmpty())
+        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replaceFirst("{", """{"programs":null,""")) }
+        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replaceFirst("{", """{"programs":[{"id":"prayer","title":"Prayer","description":"Fictional","campusIds":[],"unknown":true}],""")) }
+        val program = Program("prayer", "Prayer", "Fictional", listOf(site.campuses.first().id))
+        validateSite(site.copy(programs = listOf(program)))
+        for (programs in listOf(listOf(program, program), listOf(program.copy(campusIds = listOf("missing"))), listOf(program.copy(campusIds = program.campusIds + program.campusIds)))) {
+            assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(programs = programs)) }
+        }
+    }
     @Test fun decodesExactContract() {
         val site = decodeSite(fixture())
         assertEquals(1, site.schemaVersion)

@@ -19,7 +19,7 @@ private val slugRegex = Regex("[a-z0-9]+(?:-[a-z0-9]+)*")
 
 fun validateSite(site: Site) {
     require(site.schemaVersion == 1) { "Unsupported schema version" }
-    requireTimestamp(site.updatedAt); require(site.campuses.isNotEmpty() && site.campuses.size <= 20 && site.events.size <= 500 && site.announcements.size <= 500) { "Array bounds" }
+    requireTimestamp(site.updatedAt); require(site.campuses.isNotEmpty() && site.campuses.size <= 20 && site.events.size <= 500 && site.announcements.size <= 500 && site.programs.size <= 500) { "Array bounds" }
     val campusIds = site.campuses.map { it.id }.toSet()
     require(campusIds.size == site.campuses.size && campusIds.all { validSlug(it) }) { "Invalid or duplicate campus id" }
     require(site.events.map { it.id }.toSet().size == site.events.size) { "Duplicate event id" }
@@ -38,6 +38,11 @@ fun validateSite(site: Site) {
         require(c.timezone in ZoneId.getAvailableZoneIds()) { "Invalid timezone" }; require(c.latitude in -90.0..90.0 && c.longitude in -180.0..180.0)
         val dates = mutableSetOf<String>(); c.timetable.forEach { p -> require(dates.add(p.date)) { "Duplicate timetable date" }; requireDate(p.date); listOf(p.fajr,p.sunrise,p.dhuhr,p.asr,p.maghrib,p.isha).forEach(::requireTime); p.iqamah?.let(::validateIqamah) }
         validateIqamah(c.iqamah); c.jumuah.forEach { require(validText(it.label,100)); requireTime(it.time) }
+    }
+    require(site.programs.map { it.id }.toSet().size == site.programs.size) { "Duplicate program id" }
+    site.programs.forEach { p ->
+        require(validSlug(p.id) && validText(p.title,200) && validText(p.description,10000))
+        require(p.campusIds.size <= 20 && p.campusIds.distinct().size == p.campusIds.size && p.campusIds.all(campusIds::contains))
     }
     site.events.forEach { e -> require(validSlug(e.id) && validText(e.title,200) && validText(e.description,10000) && validText(e.location,300) && validText(e.category,80)); requireTimestamp(e.startsAt); requireTimestamp(e.endsAt); require(e.campusIds.distinct().size == e.campusIds.size); val starts = runCatching { Instant.parse(e.startsAt) }.getOrNull(); val ends = runCatching { Instant.parse(e.endsAt) }.getOrNull(); require(e.campusIds.size <= 20 && starts != null && ends != null && ends.isAfter(starts)); require(e.campusIds.all(campusIds::contains)) }
     site.announcements.forEach { a -> require(validSlug(a.id) && validText(a.title,200) && validText(a.body,10000)); require(a.campusIds.size <= 20 && a.campusIds.all(campusIds::contains)); require(a.campusIds.distinct().size == a.campusIds.size); requireTimestamp(a.publishedAt); a.expiresAt?.let { requireTimestamp(it); require(Instant.parse(it).isAfter(Instant.parse(a.publishedAt))) } }

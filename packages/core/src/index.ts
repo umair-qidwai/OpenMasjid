@@ -22,6 +22,7 @@ export const CampusSchema = z.object({
  iqamah:IqamahSchema,jumuah:z.array(z.object({label:text(100),time:TimeSchema}).strict()).max(10),timetable:z.array(PrayerDaySchema).max(1500)
 }).strict();
 const campusIds = z.array(id).max(20).refine(a => new Set(a).size === a.length, 'Duplicate campus references');
+export const ProgramSchema = z.object({id,title:text(200),description:text(10000),campusIds}).strict();
 export const EventSchema = z.object({id,title:text(200),description:text(10000),startsAt:timestamp,endsAt:timestamp,campusIds,location:text(300),category:text(80)}).strict().refine(e => Date.parse(e.endsAt) > Date.parse(e.startsAt), 'Event must end after it starts');
 export const AnnouncementSchema = z.object({id,title:text(200),body:text(10000),campusIds,publishedAt:timestamp,expiresAt:timestamp.nullable()}).strict().refine(a => a.expiresAt === null || Date.parse(a.expiresAt) > Date.parse(a.publishedAt), 'Expiry must follow publication');
 export const DonationSchema = z.object({
@@ -32,11 +33,11 @@ export const DonationSchema = z.object({
  if (donation.mode === 'external' && (donation.externalUrl === null || donation.customHtml !== '')) issue('externalUrl','External donation mode requires only an HTTPS URL');
  if (donation.mode === 'custom' && (donation.externalUrl !== null || donation.customHtml.trim().length === 0)) issue('customHtml','Custom donation mode requires only non-empty HTML');
 }).default({mode:'none',externalUrl:null,customHtml:''});
-export const SiteSchema = z.object({schemaVersion:z.literal(1),updatedAt:timestamp,organization:z.object({name:text(200),tagline:text(300),description:text(20000),email,phone,website:https,logo,theme:z.object({accent:z.string().regex(/^#[\da-fA-F]{6}$/),background:z.string().regex(/^#[\da-fA-F]{6}$/)}).strict()}).strict(),donation:DonationSchema,campuses:z.array(CampusSchema).min(1).max(20),events:z.array(EventSchema).max(500),announcements:z.array(AnnouncementSchema).max(500)}).strict().superRefine((s,ctx) => {
+export const SiteSchema = z.object({schemaVersion:z.literal(1),updatedAt:timestamp,organization:z.object({name:text(200),tagline:text(300),description:text(20000),email,phone,website:https,logo,theme:z.object({accent:z.string().regex(/^#[\da-fA-F]{6}$/),background:z.string().regex(/^#[\da-fA-F]{6}$/)}).strict()}).strict(),donation:DonationSchema,campuses:z.array(CampusSchema).min(1).max(20),events:z.array(EventSchema).max(500),announcements:z.array(AnnouncementSchema).max(500),programs:z.array(ProgramSchema).max(500).default([])}).strict().superRefine((s,ctx) => {
  const issue = (path:(string|number)[], message:string) => ctx.addIssue({code:z.ZodIssueCode.custom,path,message});
- for (const collection of ['campuses','events','announcements'] as const) { const seen = new Set<string>(); s[collection].forEach((v,i) => { if(seen.has(v.id)) issue([collection,i,'id'],'Duplicate ID'); seen.add(v.id); }); }
+ for (const collection of ['campuses','events','announcements','programs'] as const) { const seen = new Set<string>(); s[collection].forEach((v,i) => { if(seen.has(v.id)) issue([collection,i,'id'],'Duplicate ID'); seen.add(v.id); }); }
  const ids = new Set(s.campuses.map(c => c.id));
- for (const collection of ['events','announcements'] as const) s[collection].forEach((v,i) => v.campusIds.forEach((ref,j) => { if(!ids.has(ref)) issue([collection,i,'campusIds',j],'Unknown campus'); }));
+ for (const collection of ['events','announcements','programs'] as const) s[collection].forEach((v,i) => v.campusIds.forEach((ref,j) => { if(!ids.has(ref)) issue([collection,i,'campusIds',j],'Unknown campus'); }));
  s.campuses.forEach((c,i) => { const dates = new Set<string>(); c.timetable.forEach((d,j) => {if(dates.has(d.date)) issue(['campuses',i,'timetable',j,'date'],'Duplicate timetable date'); dates.add(d.date);}); });
  if (new TextEncoder().encode(JSON.stringify(s)).byteLength > MAX_CONTENT_BYTES) issue([], 'Content exceeds 1 MiB');
 });
@@ -44,6 +45,7 @@ export type Site = z.infer<typeof SiteSchema>;
 export type Campus = z.infer<typeof CampusSchema>;
 export type PrayerDay = z.infer<typeof PrayerDaySchema>;
 export type Event = z.infer<typeof EventSchema>;
+export type Program = z.infer<typeof ProgramSchema>;
 export type Announcement = z.infer<typeof AnnouncementSchema>;
 export function validateSite(value:unknown): Site {
  const serialized = JSON.stringify(value);
