@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { campusEvents, campusAnnouncements, getNextPrayer, resolveCampusId, safeAssetUrl } from '../../apps/web/src/lib/site';
+import { campusEvents, campusAnnouncements, getNextPrayer, resolveCampusId, safeAssetUrl, resolveAssetUrl } from '../../apps/web/src/lib/site';
 
 const site = {
   campuses: [{ id: 'north', timezone: 'America/New_York' }, { id: 'south', timezone: 'America/Chicago' }],
@@ -22,8 +22,14 @@ describe('site runtime helpers', () => {
     expect(getNextPrayer({ fajr: '05:00', sunrise: '06:30', dhuhr: '13:00', asr: '16:00', maghrib: '19:00', isha: '21:00' }, '15:00')?.key).toBe('asr');
     expect(getNextPrayer({ fajr: '05:00', sunrise: '06:30', dhuhr: '13:00', asr: '16:00', maghrib: '19:00', isha: '21:00' }, '22:00')?.key).toBe('fajr');
   });
-  it('only permits safe relative media paths', () => {
+  it('permits safe relative and HTTPS media URLs', () => {
     expect(safeAssetUrl('assets/logo.svg')).toBe('/assets/logo.svg');
+    expect(safeAssetUrl('https://cdn.example.org/masjid/logo.png')).toBe('https://cdn.example.org/masjid/logo.png');
+    expect(safeAssetUrl('https://cdn.example.org/masjid/logo')).toBe('https://cdn.example.org/masjid/logo');
+    expect(safeAssetUrl('https://user:pass@cdn.example.org/logo.png')).toBe('');
     expect(safeAssetUrl('javascript:alert(1)')).toBe('');
+    expect(resolveAssetUrl('assets/logo.svg', '/mosque/')).toBe('/mosque/assets/logo.svg');
+    expect(resolveAssetUrl('https://cdn.example.org/logo.svg', '/mosque/')).toBe('https://cdn.example.org/logo.svg');
+    expect(resolveAssetUrl('https://cdn.example.org/logo', '/mosque/')).toBe('https://cdn.example.org/logo');
   });
 });

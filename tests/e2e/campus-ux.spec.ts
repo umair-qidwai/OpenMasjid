@@ -10,8 +10,9 @@ test('top campus selection keeps every contact card and scopes content', async (
   await page.addInitScript(id => localStorage.setItem('openmasjid-campus', id), second.id);
   await page.goto(`/?campus=${first.id}`);
   await expect(page.locator('#campus')).toHaveValue(first.id);
-  expect(await page.locator('#campus').evaluate(el => !!(el.compareDocumentPosition(document.querySelector('#prayer')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
-  await expect(page.locator('#campus-form')).toContainText('prayer times, events, and announcements');
+  await expect(page.locator('.site-header #campus')).toHaveAttribute('aria-label', 'Current campus');
+  await expect(page.locator('main #campus-form')).toHaveCount(0);
+  await expect(page.locator('.campus-switcher')).toContainText(first.name);
   await expect(page.locator('.location-card')).toHaveCount(content.campuses.length);
   await expect(page.getByRole('link', { name: /Plan your visit/ })).toHaveCount(0);
   for (const campus of content.campuses) {
@@ -41,5 +42,6 @@ test('single campus has one contact card and no visible selector', async ({ page
   await page.goto('/');
   await expect(page.locator('.location-card')).toHaveCount(1);
   await expect(page.locator('#campus-form')).toBeHidden();
+  await expect(page.locator('.campus-static')).toHaveText(content.campuses[0].name);
   await expect(page.locator('.location-card')).toContainText('Selected campus');
 });

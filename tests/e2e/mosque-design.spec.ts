@@ -36,8 +36,8 @@ test('mosque service cards are centered, readable and responsive', async ({ page
     expect(card.font).toContain('Lora');
   }
   if (page.viewportSize()!.width > 900) {
-    expect(Math.abs(layout[0].y - layout[2].y)).toBeLessThan(2);
-    expect(layout[1].x).toBeGreaterThan(layout[0].x);
+    expect(layout[1].y).toBeGreaterThan(layout[0].y);
+    expect(layout[2].y).toBeGreaterThan(layout[1].y);
   } else {
     expect(layout[1].y).toBeGreaterThan(layout[0].y);
   }
@@ -70,6 +70,10 @@ test('reduced motion keeps content visible without typing or entrance animations
   await card.evaluate(el => el.scrollIntoView({ block: 'center' }));
   expect(await card.evaluate(el => getComputedStyle(el).opacity)).toBe('1');
   expect(await card.evaluate(el => getComputedStyle(el).animationName)).toBe('none');
+  if (page.viewportSize()!.width > 900) {
+    await expect(page.locator('.programs .section-head')).toHaveCSS('position', 'static');
+    await expect(card).toHaveCSS('position', 'static');
+  }
   expect(await page.locator('.site-header').evaluate(el => getComputedStyle(el, '::after').transitionDuration)).toBe('0s');
   expect(await page.locator('.nav a').first().evaluate(el => getComputedStyle(el, '::after').transitionDuration)).toBe('0s');
 });
@@ -85,4 +89,22 @@ test('scroll state updates progress and section navigation without hiding focus 
   await expect(page.locator('[data-nav-target="programs"]')).toHaveAttribute('aria-current', 'location');
   await page.locator('.give-section').evaluate(element => scrollTo(0, element.getBoundingClientRect().top + scrollY));
   await expect(page.locator('[data-nav-target="community"]')).toHaveAttribute('aria-current', 'location');
+});
+
+test('programs become a sticky scroll story on desktop and a normal stack on mobile', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  const heading = page.locator('.programs .section-head');
+  const cards = page.locator('.service-card');
+  if (page.viewportSize()!.width > 900) {
+    await expect(heading).toHaveCSS('position', 'sticky');
+    const styles = await cards.evaluateAll(nodes => nodes.map(node => ({ position: getComputedStyle(node).position, top: parseFloat(getComputedStyle(node).top), height: node.getBoundingClientRect().height })));
+    expect(styles.every(style => style.position === 'sticky' && style.height >= 300)).toBe(true);
+    expect(styles[1].top).toBeGreaterThan(styles[0].top);
+    expect(styles[2].top).toBeGreaterThan(styles[1].top);
+  } else {
+    await expect(heading).toHaveCSS('position', 'static');
+    await expect(cards.first()).toHaveCSS('position', 'static');
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

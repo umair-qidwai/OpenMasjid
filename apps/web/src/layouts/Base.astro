@@ -1,6 +1,6 @@
 ---
-interface Props { title?: string; description?: string }
-const { title = 'OpenMasjid', description = 'A thoughtful digital doorway to community, prayer, and belonging.' } = Astro.props;
+interface Props { title?: string; description?: string; icon?: string }
+const { title = 'OpenMasjid', description = 'A thoughtful digital doorway to community, prayer, and belonging.', icon = `${import.meta.env.BASE_URL}assets/logo.svg` } = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
@@ -10,7 +10,7 @@ const { title = 'OpenMasjid', description = 'A thoughtful digital doorway to com
     <meta name="description" content={description} />
     <meta name="theme-color" content="#173c34" />
     <title>{title}</title>
-    <link rel="icon" href={`${import.meta.env.BASE_URL}assets/logo.svg`} />
+    <link rel="icon" href={icon} />
   </head>
   <body><slot /></body>
 </html>

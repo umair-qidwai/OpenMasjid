@@ -26,7 +26,16 @@ export function getNextPrayer(row: PrayerRow, current: string) {
   return { key: next, time: row[next] };
 }
 export function safeAssetUrl(value: string) {
-  return /^\/?[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*\.(?:svg|png|webp|jpg|jpeg|avif)$/i.test(value) ? `/${value.replace(/^\//, '')}` : '';
+  if (/^\/?[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*\.(?:svg|png|webp|jpg|jpeg|avif)$/i.test(value)) return `/${value.replace(/^\//, '')}`;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password && !/[\s\\]/.test(value) ? url.href : '';
+  } catch { return ''; }
+}
+export function resolveAssetUrl(value: string, basePath: string, fallback = 'assets/logo.svg') {
+  const safe = safeAssetUrl(value);
+  if (/^https:\/\//i.test(safe)) return safe;
+  return `${basePath}${(safe || fallback).replace(/^\//, '')}`;
 }
 export function localTime(timeZone: string, date = new Date()) {
   return new Intl.DateTimeFormat('en-US', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);

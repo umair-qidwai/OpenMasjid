@@ -85,6 +85,17 @@ test.describe('public site browser UX', () => {
     await page.waitForLoadState('networkidle');
     expect(exceptions).toEqual([]);
   });
+
+  test('uses the configured logo for header, footer and favicon', async ({ page }) => {
+    const response = await page.request.get('/data/v1/site.json');
+    const content = await response.json();
+    content.organization.logo = 'https://cdn.example.org/masjid-logo';
+    await page.route('**/data/v1/site.json', route => route.fulfill({ json: content }));
+    await page.goto('/');
+    await expect(page.locator('[data-site-logo]')).toHaveCount(3);
+    for (const logo of await page.locator('[data-site-logo]').all()) await expect(logo).toHaveAttribute('src', content.organization.logo);
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', content.organization.logo);
+  });
 });
 
 test.describe('donation page', () => {
