@@ -57,9 +57,10 @@ public struct Campus: Codable, Equatable, Identifiable { public let id,name,addr
 public struct OfferingDetails: Codable, Equatable {
  public let enabled: Bool
  public let content: String
- public init(enabled: Bool = false, content: String = "") { self.enabled=enabled; self.content=content }
- enum K: String, CodingKey, CaseIterable { case enabled, content }
- public init(from d: Decoder) throws { let c=try d.container(keyedBy:K.self);try strict(d,Set(K.allCases.map{$0.rawValue}));enabled=try c.decode(Bool.self,forKey:.enabled);content=try c.decode(String.self,forKey:.content) }
+ public let image: String
+ public init(enabled: Bool = false, content: String = "", image: String = "") { self.enabled=enabled; self.content=content; self.image=image }
+ enum K: String, CodingKey, CaseIterable { case enabled, content, image }
+ public init(from d: Decoder) throws { let c=try d.container(keyedBy:K.self);try strict(d,Set(K.allCases.map{$0.rawValue}));enabled=try c.decode(Bool.self,forKey:.enabled);content=try c.decode(String.self,forKey:.content);image=c.contains(.image) ? try c.decode(String.self,forKey:.image) : "" }
 }
 public struct Program: Codable, Equatable, Identifiable {
  public let id, title, description: String
@@ -100,11 +101,11 @@ public struct Site: Codable, Equatable { public let schemaVersion:Int; public le
   }
   var programIDs = Set<String>()
   for p in programs {
-   guard programIDs.insert(p.id).inserted, validID(p.id), validText(p.title,200), validText(p.description,10000), p.campusIds.count <= 20, Set(p.campusIds).count == p.campusIds.count, p.campusIds.allSatisfy({ validID($0) && ids.contains($0) }), p.details.content.utf16.count <= 50000, !p.details.enabled || !p.details.content.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else { throw SiteError.invalid("program") }
+   guard programIDs.insert(p.id).inserted, validID(p.id), validText(p.title,200), validText(p.description,10000), p.campusIds.count <= 20, Set(p.campusIds).count == p.campusIds.count, p.campusIds.allSatisfy({ validID($0) && ids.contains($0) }), p.details.content.utf16.count <= 50000, !p.details.enabled || !p.details.content.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty, p.details.image.isEmpty || validURL(p.details.image, allowPath: true) else { throw SiteError.invalid("program") }
   }
   var serviceIDs = Set<String>()
   for s in services {
-   guard serviceIDs.insert(s.id).inserted, validID(s.id), validText(s.title,200), validText(s.description,10000), s.campusIds.count <= 20, Set(s.campusIds).count == s.campusIds.count, s.campusIds.allSatisfy({ validID($0) && ids.contains($0) }), s.details.content.utf16.count <= 50000, !s.details.enabled || !s.details.content.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else { throw SiteError.invalid("service") }
+   guard serviceIDs.insert(s.id).inserted, validID(s.id), validText(s.title,200), validText(s.description,10000), s.campusIds.count <= 20, Set(s.campusIds).count == s.campusIds.count, s.campusIds.allSatisfy({ validID($0) && ids.contains($0) }), s.details.content.utf16.count <= 50000, !s.details.enabled || !s.details.content.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty, s.details.image.isEmpty || validURL(s.details.image, allowPath: true) else { throw SiteError.invalid("service") }
   }
   var eventIDs=Set<String>(); for e in events { guard eventIDs.insert(e.id).inserted, validID(e.id), validText(e.title,200), validText(e.description,10000), validText(e.location,300), validText(e.category,80), validTimestamp(e.startsAt), validTimestamp(e.endsAt), e.campusIds.count <= 20, Set(e.campusIds).count == e.campusIds.count, e.campusIds.allSatisfy({ validID($0) && ids.contains($0) }), let start=timestampDate(e.startsAt), let end=timestampDate(e.endsAt), end > start else { throw SiteError.invalid("event") } }
   var announcementIDs=Set<String>(); for a in announcements { guard announcementIDs.insert(a.id).inserted, validID(a.id), validText(a.title,200), validText(a.body,10000), a.campusIds.count <= 20, Set(a.campusIds).count == a.campusIds.count, a.campusIds.allSatisfy({ validID($0) && ids.contains($0) }), validTimestamp(a.publishedAt), a.expiresAt == nil || validTimestamp(a.expiresAt!), let published=timestampDate(a.publishedAt), a.expiresAt == nil || timestampDate(a.expiresAt!)! > published else { throw SiteError.invalid("announcement") } }

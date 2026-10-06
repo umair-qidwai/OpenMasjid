@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Community learning illustration</title>
+  <desc id="desc">An abstract mosque arch, open book, and gathering circles in green and gold.</desc>
+  <rect width="1200" height="800" fill="#173c34"/>
+  <circle cx="1010" cy="120" r="210" fill="#b38a4b" opacity=".24"/>
+  <circle cx="150" cy="720" r="260" fill="#2f5e51" opacity=".55"/>
+  <path d="M330 650V350c0-177 120-270 270-270s270 93 270 270v300" fill="#faf8f3" opacity=".08" stroke="#d8b875" stroke-width="8"/>
+  <path d="M415 600c70-42 132-43 185-3 53-40 115-39 185 3v110c-70-42-132-43-185-3-53-40-115-39-185 3Z" fill="#faf8f3" stroke="#d8b875" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M600 597v110" stroke="#d8b875" stroke-width="8"/>
+  <g fill="#d8b875">
+    <circle cx="260" cy="310" r="34"/><circle cx="940" cy="310" r="34"/>
+    <circle cx="220" cy="405" r="25" opacity=".72"/><circle cx="980" cy="405" r="25" opacity=".72"/>
+  </g>
+  <g fill="none" stroke="#faf8f3" stroke-width="8" opacity=".72">
+    <path d="M192 372c18-54 118-54 136 0"/><path d="M872 372c18-54 118-54 136 0"/>
+    <path d="M170 455c15-40 85-40 100 0"/><path d="M930 455c15-40 85-40 100 0"/>
+  </g>
+  <path d="M80 120h260M860 680h260" stroke="#d8b875" stroke-width="4" opacity=".5"/>
+</svg>

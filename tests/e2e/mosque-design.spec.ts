@@ -73,18 +73,18 @@ test('reduced motion keeps content visible without typing or entrance animations
     await expect(page.locator('#programs .section-head')).toHaveCSS('position', 'static');
     await expect(card).toHaveCSS('position', 'static');
   }
-  expect(await page.locator('.site-header').evaluate(el => getComputedStyle(el, '::after').transitionDuration)).toBe('0s');
+  expect(await page.locator('.site-header').evaluate(el => getComputedStyle(el, '::after').content)).toBe('none');
   expect(await page.locator('.nav a').first().evaluate(el => getComputedStyle(el, '::after').transitionDuration)).toBe('0s');
 });
 
-test('scroll state updates progress and section navigation without hiding focus outlines', async ({ page }) => {
+test('scroll state updates section navigation without a header progress bar', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; });
   const header = page.locator('.site-header');
   await expect(header).toHaveCSS('overflow', 'visible');
   await page.locator('#programs').evaluate(element => scrollTo(0, element.getBoundingClientRect().top + scrollY - innerHeight * .3));
-  await expect.poll(() => header.evaluate(el => Number(getComputedStyle(el).getPropertyValue('--scroll-progress')))).toBeGreaterThan(0);
+  expect(await header.evaluate(el => getComputedStyle(el, '::after').content)).toBe('none');
   await expect(page.locator('[data-nav-target="programs"]')).toHaveAttribute('aria-current', 'location');
   await page.locator('.give-section').evaluate(element => scrollTo(0, element.getBoundingClientRect().top + scrollY));
   await expect(page.locator('[data-nav-target="community"]')).toHaveAttribute('aria-current', 'location');

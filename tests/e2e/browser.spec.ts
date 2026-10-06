@@ -26,6 +26,7 @@ test.describe('public site browser UX', () => {
     await expect(page.getByText('Second gathering · 14:15')).toBeVisible();
     await expect(page.locator('.site-header').getByRole('link', { name: 'Donate' })).toHaveAttribute('href', /donate\/$/);
     await expect(page.getByRole('link', { name: /Admin|Publisher admin/i })).toHaveCount(0);
+    await expect(page.getByText('A welcoming digital doorway for prayer, service, and belonging.', { exact: true })).toHaveCount(0);
     for (const heading of ['Prayer times', 'Programs', 'Services', 'Upcoming events', 'Announcements', 'Locations']) {
       await expect(page.getByRole('heading', { name: heading })).toBeVisible();
     }
@@ -168,6 +169,7 @@ test.describe('admin editor browser UX', () => {
     await newProgram.locator('[data-path$=".title"]').fill('Youth circle');
     await newProgram.locator('[data-path$=".details.enabled"]').check();
     await newProgram.locator('[data-path$=".details.content"]').fill('A welcoming weekly youth circle.');
+    await newProgram.locator('[data-path$=".details.image"]').fill('/assets/youth-circle.jpg');
     await newProgram.getByLabel('Specific campuses').check();
     await newProgram.getByLabel('Riverside · Fictional Demo').check();
     await newService.locator('[data-path$=".title"]').fill('Family support');
@@ -175,9 +177,9 @@ test.describe('admin editor browser UX', () => {
     await page.getByRole('button', { name: 'Save local draft' }).click();
     await expect(page.locator('#editor-message')).toContainText('Saved locally');
     const draft = await page.evaluate(() => JSON.parse(localStorage.getItem('openmasjid-draft') || '{}'));
-    expect(draft.programs.at(-1).details).toEqual({ enabled: true, content: 'A welcoming weekly youth circle.' });
+    expect(draft.programs.at(-1).details).toEqual({ enabled: true, content: 'A welcoming weekly youth circle.', image: '/assets/youth-circle.jpg' });
     expect(draft.programs.at(-1).campusIds).toEqual(['demo-riverside']);
-    expect(draft.services.at(-1).details).toEqual({ enabled: false, content: '' });
+    expect(draft.services.at(-1).details).toEqual({ enabled: false, content: '', image: '' });
     expect(draft.services.some((service: { title: string }) => service.title === 'Prayer & reflection')).toBe(false);
   });
 
@@ -267,5 +269,7 @@ test.describe('program and service pages', () => {
     await expect(page).toHaveURL(/\/programs\/learning-for-life\/$/);
     await expect(page.getByRole('heading', { name: 'Learning for life' })).toBeVisible();
     await expect(page.getByText('Our learning programs create welcoming spaces')).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Learning for life' })).toBeVisible();
+    await expect(page.locator('.detail-layout')).toBeVisible();
   });
 });

@@ -44,12 +44,14 @@ fun validateSite(site: Site) {
         require(validSlug(p.id) && validText(p.title,200) && validText(p.description,10000))
         require(p.campusIds.size <= 20 && p.campusIds.distinct().size == p.campusIds.size && p.campusIds.all(campusIds::contains))
         require(p.details.content.length <= 50000 && (!p.details.enabled || p.details.content.isNotBlank()))
+        if (p.details.image.isNotEmpty()) requireSafeLogo(p.details.image)
     }
     require(site.services.map { it.id }.toSet().size == site.services.size) { "Duplicate service id" }
     site.services.forEach { s ->
         require(validSlug(s.id) && validText(s.title,200) && validText(s.description,10000))
         require(s.campusIds.size <= 20 && s.campusIds.distinct().size == s.campusIds.size && s.campusIds.all(campusIds::contains))
         require(s.details.content.length <= 50000 && (!s.details.enabled || s.details.content.isNotBlank()))
+        if (s.details.image.isNotEmpty()) requireSafeLogo(s.details.image)
     }
     site.events.forEach { e -> require(validSlug(e.id) && validText(e.title,200) && validText(e.description,10000) && validText(e.location,300) && validText(e.category,80)); requireTimestamp(e.startsAt); requireTimestamp(e.endsAt); require(e.campusIds.distinct().size == e.campusIds.size); val starts = runCatching { Instant.parse(e.startsAt) }.getOrNull(); val ends = runCatching { Instant.parse(e.endsAt) }.getOrNull(); require(e.campusIds.size <= 20 && starts != null && ends != null && ends.isAfter(starts)); require(e.campusIds.all(campusIds::contains)) }
     site.announcements.forEach { a -> require(validSlug(a.id) && validText(a.title,200) && validText(a.body,10000)); require(a.campusIds.size <= 20 && a.campusIds.all(campusIds::contains)); require(a.campusIds.distinct().size == a.campusIds.size); requireTimestamp(a.publishedAt); a.expiresAt?.let { requireTimestamp(it); require(Instant.parse(it).isAfter(Instant.parse(a.publishedAt))) } }
@@ -71,7 +73,7 @@ private fun validEmail(s: String) = s.length <= 254 && Regex("^[^@\\s]+@[^@\\s]+
 private fun requireHttps(s: String) { val u = runCatching { java.net.URI(s) }.getOrNull(); require(s.length <= 2048 && u != null && u.scheme.equals("https", true) && u.userInfo == null && u.host != null && !s.any { it.isWhitespace() || it == '\\' }) { "HTTPS URL required" } }
 private fun requireSafeLogo(s: String) {
     val relative = Regex("^/?[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*\\.(svg|png|webp|jpg|jpeg|avif)$", RegexOption.IGNORE_CASE)
-    if (s.startsWith("https://")) requireHttps(s) else require(relative.matches(s)) { "Unsafe logo URL" }
+    if (s.startsWith("https://", ignoreCase = true)) requireHttps(s) else require(relative.matches(s)) { "Unsafe logo URL" }
 }
 
 fun localDateISO(now: Instant, timeZone: String): String = now.atZone(ZoneId.of(timeZone)).toLocalDate().toString()

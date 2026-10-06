@@ -7,13 +7,17 @@ final class OpenMasjidCoreTests: XCTestCase {
     """
     func testAcceptsAdditivePrograms() throws {
         var root = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
-        root["programs"] = [["id": "prayer", "title": "Prayer", "description": "Fictional", "campusIds": ["north-campus"]]]
-        XCTAssertNoThrow(try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: root)))
+        root["programs"] = [["id": "prayer", "title": "Prayer", "description": "Fictional", "campusIds": ["north-campus"], "details": ["enabled": true, "content": "Join us", "image": "/assets/prayer.jpg"]]]
+        let site = try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: root))
+        XCTAssertEqual(site.programs.first?.details.image, "/assets/prayer.jpg")
     }
     func testProgramsDefaultAndValidation() throws {
         let legacy = try JSONDecoder().decode(Site.self, from: Data(json.utf8))
         XCTAssertEqual(legacy.programs.count, 0)
         XCTAssertEqual(legacy.services.count, 0)
+        var defaultImage = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
+        defaultImage["programs"] = [["id": "prayer", "title": "Prayer", "description": "Fictional", "campusIds": ["north-campus"], "details": ["enabled": false, "content": ""]]]
+        XCTAssertEqual(try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: defaultImage)).programs.first?.details.image, "")
         let valid: [String: Any] = ["id": "prayer", "title": "Prayer", "description": "Fictional", "campusIds": ["north-campus"]]
         var unknown = valid; unknown["campusIds"] = ["missing"]
         var duplicate = valid; duplicate["campusIds"] = ["north-campus", "north-campus"]
@@ -35,6 +39,9 @@ final class OpenMasjidCoreTests: XCTestCase {
             partial["programs"] = [["id":"prayer", "title":"Prayer", "description":"Fictional", "campusIds":[], "details":details]]
             XCTAssertThrowsError(try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: partial)))
         }
+        var unsafeImage = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
+        unsafeImage["programs"] = [["id":"prayer", "title":"Prayer", "description":"Fictional", "campusIds":[], "details":["enabled":false, "content":"", "image":"../private.png"]]]
+        XCTAssertThrowsError(try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: unsafeImage)))
     }
     func testDecodesStrictSchemaAndRejectsUnknownFields() throws { let site=try JSONDecoder().decode(Site.self,from:Data(json.utf8)); XCTAssertEqual(site.campuses.count,1); XCTAssertEqual(site.donation.mode, .none); var bad=json; bad=bad.replacingOccurrences(of:"\"schemaVersion\":1",with:"\"unexpected\":true,\"schemaVersion\":1"); XCTAssertThrowsError(try JSONDecoder().decode(Site.self,from:Data(bad.utf8))) }
     func testAcceptsFractionalRFC3339Timestamps() throws { let fractional = json.replacingOccurrences(of: "2026-01-01T12:00:00Z", with: "2026-01-01T12:00:00.123Z"); XCTAssertNoThrow(try JSONDecoder().decode(Site.self, from: Data(fractional.utf8))) }

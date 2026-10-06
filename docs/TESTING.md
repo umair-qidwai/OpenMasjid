@@ -53,7 +53,7 @@ npm run test:e2e -- --workers=1
 
 Stop any manually started server on port 4321 first; Playwright starts production preview. Inspect failures/screenshots under ignored `test-results/`. The tests cover runtime data, campus persistence/filtering, editor CRUD, validated draft restore, backup/CSV errors, unavailable API, keyboard access, console errors, reduced motion and overflow.
 
-## 3. iOS — Mac required
+## 3. iOS: Mac required
 
 1. Install Xcode (15.4 or newer), launch it and complete initial setup. Install an iOS simulator runtime in Xcode Settings → Platforms/Components.
 2. Install XcodeGen. With Homebrew and a current Xcode: `brew install xcodegen`. For the exact Xcode 15.4 CI setup, use XcodeGen 2.42.0 as installed in `.github/workflows/ios.yml`.
@@ -77,7 +77,7 @@ xcodebuild -project OpenMasjid.xcodeproj -scheme OpenMasjid -sdk iphonesimulator
 
 For your iPhone: connect/trust it, enable Developer Mode when prompted, select the app target → Signing & Capabilities → your Team, use a unique bundle identifier, select your iPhone as destination, then Run. A personal Apple ID can support limited development testing; TestFlight/App Store distribution requires the appropriate Apple Developer membership and provisioning. No signing secrets are included.
 
-## 4. Android — Android Studio
+## 4. Android: Android Studio
 
 1. Install Android Studio and complete SDK setup. In SDK Manager install Android SDK Platform 35, build tools, and platform-tools.
 2. Open `apps/android` as the project. Let Gradle sync. Set the Gradle JDK to Java 17 in Android Studio's Gradle settings; a JDK is NOT distributed in this repository.

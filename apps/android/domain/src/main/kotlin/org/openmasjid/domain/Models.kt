@@ -26,7 +26,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class Jumuah(val label: String, val time: String)
 @Serializable data class PrayerDay(val date: String, val fajr: String, val sunrise: String, val dhuhr: String, val asr: String, val maghrib: String, val isha: String, val iqamah: Iqamah? = null, val source: Source? = null)
 @Serializable enum class Source { calculated, uploaded }
-@Serializable data class OfferingDetails(val enabled: Boolean, val content: String)
+@Serializable data class OfferingDetails(val enabled: Boolean, val content: String, val image: String = "")
 @Serializable data class Program(val id: String, val title: String, val description: String, val campusIds: List<String>, val details: OfferingDetails = OfferingDetails(false, ""))
 typealias Service = Program
 @Serializable data class Event(val id: String, val title: String, val description: String, val startsAt: String, val endsAt: String, val campusIds: List<String>, val location: String, val category: String)

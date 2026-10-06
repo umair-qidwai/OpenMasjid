@@ -33,12 +33,12 @@ interface PrayerDay {
 }
 interface Event { id:string; title:string; description:string; startsAt:string; endsAt:string; campusIds:string[]; location:string; category:string; } // campusIds [] means all campuses; RFC3339 timestamps with offset
 interface Announcement { id:string; title:string; body:string; campusIds:string[]; publishedAt:string; expiresAt:string|null; }
-interface Offering { id:string; title:string; description:string; campusIds:string[]; details:{ enabled:boolean; content:string; }; }
+interface Offering { id:string; title:string; description:string; campusIds:string[]; details:{ enabled:boolean; content:string; image:string; }; }
 ```
 
 IDs lower-case safe slugs max 64; unique globally within entity collections. Reject unknown fields (schema strict). Validate timestamps, real calendar dates, HH:mm, timezones, hex colors, HTTPS website/logo URLs (logo may be safe root/base-relative asset path), email/phone lengths; no HTML rendering of content. Reject arbitrary executable URL schemes. Limit content payload 1 MiB and bounded arrays/strings. At least one campus required; all referenced campus IDs exist.
 
-`programs` and `services` are separate optional-by-version arrays; missing arrays default to empty on every client while explicit `null` is invalid. Each offering's missing `details` defaults to `{ enabled:false, content:'' }`. When enabled, content must be non-blank and is rendered as escaped plain text in a generated details page; disabled offerings remain homepage cards without a link.
+`programs` and `services` are separate optional-by-version arrays; missing arrays default to empty on every client while explicit `null` is invalid. Each offering's missing `details` defaults to `{ enabled:false, content:'', image:'' }`. Within a present details object, an omitted `image` defaults to an empty string while explicit `null` is invalid. Images accept only a credential-free HTTPS URL or safe image asset path. When enabled, content must be non-blank and is rendered as escaped plain text in a generated details page; disabled offerings remain homepage cards without a link.
 
 `tools/publish-content.ts`: validate source, generate missing prayer rows from adhan calculation for current date through at least the next 365 days (preserve uploaded rows), write public copy `apps/web/public/data/v1/site.json`. Template sample organization/campuses MUST be explicitly labeled fictional demo, not represent live mosque data. CSV import header date,fajr,sunrise,dhuhr,asr,maghrib,isha and optional iqamah_fajr,iqamah_dhuhr,iqamah_asr,iqamah_maghrib,iqamah_isha. Reject invalid/duplicate dates atomically.
 

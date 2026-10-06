@@ -34,6 +34,8 @@ it.each([
   ['null details', { programs: [{ ...program, details: null }] }],
   ['details missing enabled', { programs: [{ ...program, details: { content: '' } }] }],
   ['details missing content', { programs: [{ ...program, details: { enabled: false } }] }],
+  ['null detail image', { programs: [{ ...program, details: { enabled: false, content: '', image: null } }] }],
+  ['unsafe detail image', { programs: [{ ...program, details: { enabled: false, content: '', image: '../private.png' } }] }],
 ])('rejects %s instead of applying partial defaults', (_label, change) => {
   expect(() => validateSite({ ...demo(), ...change })).toThrow();
 });
@@ -45,13 +47,13 @@ it('accepts campus-scoped programs and defaults old schema-v1 documents', () => 
 
   const programs = [
     { id: 'prayer', title: 'Prayer', description: 'Gather together', campusIds: [] },
-    { id: 'learning', title: 'Learning', description: 'Learn together', campusIds: ['garden'], details: { enabled: true, content: 'Weekly classes for every age.' } },
+    { id: 'learning', title: 'Learning', description: 'Learn together', campusIds: ['garden'], details: { enabled: true, content: 'Weekly classes for every age.', image: '/assets/learning.jpg' } },
   ];
   const services = [
     { id: 'care', title: 'Care', description: 'Serve together', campusIds: ['garden', 'riverside'], details: { enabled: false, content: '' } },
   ];
   const parsed = validateSite({ ...demo(), programs, services }) as any;
-  expect(parsed.programs[0].details).toEqual({ enabled: false, content: '' });
+  expect(parsed.programs[0].details).toEqual({ enabled: false, content: '', image: '' });
   expect(parsed.programs[1]).toEqual(programs[1]);
-  expect(parsed.services).toEqual(services);
+  expect(parsed.services).toEqual([{ ...services[0], details: { ...services[0].details, image: '' } }]);
 });

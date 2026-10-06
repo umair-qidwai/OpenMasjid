@@ -4,9 +4,9 @@ Native SwiftUI iOS 17+ client for the OpenMasjid v1 site contract. The bundled J
 
 ## Structure
 
-- `Core/` — Swift Package Foundation models, strict Codable validation, filtering/date helpers, HTTPS loader/cache, and XCTest tests.
-- `OpenMasjidApp/` — SwiftUI app with native tabs, campus selection, prayer/iqamah/Jumuah presentation, events, announcement detail, safe contact/maps links, settings, theming, and stale/offline state.
-- `project.yml` — XcodeGen project definition.
+- `Core/`: Swift Package Foundation models, strict Codable validation, filtering/date helpers, HTTPS loader/cache, and XCTest tests.
+- `OpenMasjidApp/`: SwiftUI app with native tabs, campus selection, prayer/iqamah/Jumuah presentation, events, announcement detail, safe contact/maps links, settings, theming, and stale/offline state.
+- `project.yml`: XcodeGen project definition.
 
 ## Build and test (macOS with Xcode 15+)
 

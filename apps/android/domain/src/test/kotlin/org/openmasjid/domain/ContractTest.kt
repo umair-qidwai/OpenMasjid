@@ -17,8 +17,10 @@ class ContractTest {
         assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(announcements = listOf(announcement.copy(publishedAt = "1800-10-01T12:00:00Z")))) }
     }
     @Test fun acceptsAdditivePrograms() {
-        val raw = fixture().replaceFirst("{", """{"programs":[{"id":"prayer","title":"Prayer","description":"Fictional","campusIds":["demo-central"]}],""")
-        assertEquals(1, decodeSite(raw).schemaVersion)
+        val raw = fixture().replaceFirst("{", """{"programs":[{"id":"prayer","title":"Prayer","description":"Fictional","campusIds":["demo-central"],"details":{"enabled":true,"content":"Join us","image":"HTTPS://example.org/prayer.jpg"}}],""")
+        val site = decodeSite(raw)
+        assertEquals(1, site.schemaVersion)
+        assertEquals("HTTPS://example.org/prayer.jpg", site.programs.single().details.image)
     }
     @Test fun programsDefaultAndValidation() {
         val site = decodeSite(fixture())
@@ -32,9 +34,12 @@ class ContractTest {
         }
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replaceFirst("{", """{"programs":[{"id":"prayer","title":"Prayer","description":"Fictional","campusIds":[],"unknown":true}],""")) }
         val program = Program("prayer", "Prayer", "Fictional", listOf(site.campuses.first().id))
+        assertEquals("", program.details.image)
         validateSite(site.copy(programs = listOf(program)))
         validateSite(site.copy(services = listOf(program.copy(id = "care"))))
         assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(services = listOf(program.copy(id = "care", details = OfferingDetails(true, " "))))) }
+        val unsafeImage = fixture().replaceFirst("{", """{"programs":[{"id":"prayer","title":"Prayer","description":"Fictional","campusIds":[],"details":{"enabled":false,"content":"","image":"../private.png"}}],""")
+        assertThrows(IllegalArgumentException::class.java) { decodeSite(unsafeImage) }
         for (programs in listOf(listOf(program, program), listOf(program.copy(campusIds = listOf("missing"))), listOf(program.copy(campusIds = program.campusIds + program.campusIds)))) {
             assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(programs = programs)) }
         }

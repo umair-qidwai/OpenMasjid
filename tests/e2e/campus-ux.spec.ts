@@ -27,6 +27,7 @@ test('first visit asks once, then Locations owns campus switching', async ({ pag
   await expect(page.locator('#event-cards')).toContainText(`${second.name} event`);
   await expect(page.locator('#event-cards')).not.toContainText(`${first.name} event`);
   await expect(page.locator('.location-card')).toHaveCount(content.campuses.length);
+  await expect(page.getByRole('heading', { name: 'Locations', exact: true })).toBeVisible();
   await expect(page.locator('.location-card[data-selected="true"]')).toContainText(second.name);
 
   const firstCard = page.locator('.location-card').filter({ hasText: first.name });
@@ -49,8 +50,10 @@ test('saved campus skips the first-visit dialog and keeps contact actions', asyn
   for (const campus of content.campuses) {
     const card = page.locator('.location-card').filter({ hasText: campus.name });
     await expect(card).toContainText(campus.address);
-    await expect(card.getByRole('link', { name: /^Email/ })).toHaveAttribute('href', `mailto:${campus.email}`);
-    await expect(card.getByRole('link', { name: /^Call/ })).toHaveAttribute('href', `tel:${campus.phone}`);
+    await expect(card.getByRole('link', { name: new RegExp(`Email ${campus.name}`) })).toHaveAttribute('href', `mailto:${campus.email}`);
+    await expect(card.getByRole('link', { name: new RegExp(`Call ${campus.name}`) })).toHaveAttribute('href', `tel:${campus.phone}`);
+    await expect(card.getByRole('link', { name: new RegExp(`Email ${campus.name}`) })).toHaveText(campus.email);
+    await expect(card.getByRole('link', { name: new RegExp(`Call ${campus.name}`) })).toHaveText(campus.phone);
     await expect(card.getByRole('link', { name: /Directions/ })).toHaveAttribute('href', `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${campus.address}, ${campus.city}`)}`);
   }
 });
@@ -62,6 +65,7 @@ test('single-campus sites show one location without prompting or switching contr
   await page.goto('/');
   await expect(page.getByRole('dialog', { name: 'Choose your location' })).toBeHidden();
   await expect(page.locator('.location-card')).toHaveCount(1);
+  await expect(page.getByRole('heading', { name: 'Location', exact: true })).toBeVisible();
   await expect(page.locator('.location-card')).toContainText('Current location');
   await expect(page.locator('.location-card').getByRole('button', { name: /Use/ })).toHaveCount(0);
 });

@@ -23,9 +23,9 @@ export const CampusSchema = z.object({
  iqamah:IqamahSchema,jumuah:z.array(z.object({label:text(100),time:TimeSchema}).strict()).max(10),timetable:z.array(PrayerDaySchema).max(1500)
 }).strict();
 const campusIds = z.array(id).max(20).refine(a => new Set(a).size === a.length, 'Duplicate campus references');
-export const DetailsSchema = z.object({enabled:z.boolean(),content:z.string().max(50000)}).strict().superRefine((details,ctx) => {
+export const DetailsSchema = z.object({enabled:z.boolean(),content:z.string().max(50000),image:z.union([z.literal(''),logo]).default('')}).strict().superRefine((details,ctx) => {
  if (details.enabled && details.content.trim().length === 0) ctx.addIssue({code:z.ZodIssueCode.custom,path:['content'],message:'Details page content is required when enabled'});
-}).default({enabled:false,content:''});
+}).default({enabled:false,content:'',image:''});
 export const ProgramSchema = z.object({id,title:text(200),description:text(10000),campusIds,details:DetailsSchema}).strict();
 export const ServiceSchema = ProgramSchema;
 export const EventSchema = z.object({id,title:text(200),description:text(10000),startsAt:timestamp,endsAt:timestamp,campusIds,location:text(300),category:text(80)}).strict().refine(e => Date.parse(e.endsAt) > Date.parse(e.startsAt), 'Event must end after it starts');
