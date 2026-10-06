@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import site from '../../lib/site.json';
-import { resolveAssetUrl } from '../../lib/site';
+import { resolveAssetUrl, resolveTabLogo } from '../../lib/site';
 
 export function getStaticPaths() {
   return [
@@ -14,11 +14,13 @@ const { item, kind } = Astro.props;
 const { collection } = Astro.params;
 const basePath = import.meta.env.BASE_URL;
 const logoUrl = resolveAssetUrl(site.organization.logo, basePath);
+const tabLogoUrl = resolveTabLogo(site, basePath);
+const tabLogoDarkUrl = resolveTabLogo(site, basePath, true);
 const detailImage = item.details.image ? resolveAssetUrl(item.details.image, basePath) : '';
 const availableAt = item.campusIds.length ? site.campuses.filter((campus) => item.campusIds.includes(campus.id)) : site.campuses;
 const locationLabel = availableAt.length === 1 ? 'Location' : 'Locations';
 ---
-<Base title={`${item.title} · ${site.organization.name}`} description={item.description} icon={logoUrl}>
+<Base title={`${item.title} · ${site.organization.name}`} description={item.description} icon={tabLogoUrl} iconDark={tabLogoDarkUrl}>
   <header class="detail-header container">
     <a class="brand" href={basePath} aria-label={`${site.organization.name} home`}><img src={logoUrl} alt="" /><span>{site.organization.name}</span></a>
     <a class="back-link" href={`${basePath}#${collection}`}><span aria-hidden="true">←</span> Back to {collection}</a>

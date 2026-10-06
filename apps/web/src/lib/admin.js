@@ -109,7 +109,7 @@ function setPath(target, path, value) {
 
 export function syncForm(state, form) {
   form.querySelectorAll('[data-path]').forEach((element) => setPath(state.content, element.dataset.path, element.type === 'checkbox' ? element.checked : element.value));
-  const formFields = form.querySelectorAll('[name]:not([name^="audience-"])');
+  const formFields = form.querySelectorAll('[name]:not([name^="audience-"]):not([data-path])');
   formFields.forEach((element) => setPath(state.content, element.name, element.value));
   if (state.content.donation.mode === 'none') { state.content.donation.externalUrl = null; state.content.donation.customHtml = ''; }
   else if (state.content.donation.mode === 'external') state.content.donation.customHtml = '';

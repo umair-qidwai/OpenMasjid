@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import site from '../lib/site.json';
-import { getNextPrayer, localDate, localTime, resolveCampusId, campusEvents, campusAnnouncements, resolveAssetUrl } from '../lib/site';
+import { getNextPrayer, localDate, localTime, resolveCampusId, campusEvents, campusAnnouncements, resolveAssetUrl, resolveTabLogo } from '../lib/site';
 const campusId = resolveCampusId(site);
 const campus = site.campuses.find((item) => item.id === campusId)!;
 const today = localDate(campus.timezone);
@@ -11,6 +11,8 @@ const events = campusEvents(site, campusId).slice(0, 3);
 const announcements = campusAnnouncements(site, campusId).slice(0, 3);
 const basePath = import.meta.env.BASE_URL;
 const logoUrl = resolveAssetUrl(site.organization.logo, basePath);
+const tabLogoUrl = resolveTabLogo(site, basePath);
+const tabLogoDarkUrl = resolveTabLogo(site, basePath, true);
 const locationLabel = site.campuses.length === 1 ? 'Location' : 'Locations';
 const prayerKeys = ['fajr','sunrise','dhuhr','asr','maghrib','isha'] as const;
 const offeringSections = [
@@ -18,7 +20,7 @@ const offeringSections = [
   { id: 'services', title: 'Services', description: 'Practical, spiritual, and community support when you need it.', items: site.services },
 ];
 ---
-<Base title={`${site.organization.name} · ${campus.name}`} description={site.organization.tagline} icon={logoUrl}>
+<Base title={`${site.organization.name} · ${campus.name}`} description={site.organization.tagline} icon={tabLogoUrl} iconDark={tabLogoDarkUrl}>
   <link rel="stylesheet" href={`${basePath}assets/fonts/fonts.css`} />
   <header class="container site-header" id="site-header">
     <a class="brand" href={basePath} aria-label={site.organization.name}><img src={logoUrl} data-site-logo alt="" /><span class="brand-name">{site.organization.name}</span></a>
@@ -170,13 +172,17 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
   const navLinks = [...document.querySelectorAll('[data-nav-target]')];
   const navSections = navLinks.map((link) => ({link, section: document.querySelector(`#${link.dataset.navTarget}`)})).filter((item) => item.section);
   const heroArt = document.querySelector('.hero-art');
-  const updateLogo = (value) => {
-    let source = '';
-    if (/^\/?[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*\.(?:svg|png|webp|jpg|jpeg|avif)$/i.test(value || '')) source = `${basePath}${value.replace(/^\//, '')}`;
-    else { try { const url = new URL(value); if (url.protocol === 'https:' && !url.username && !url.password && !/[\s\\]/.test(value)) source = url.href; } catch {} }
-    if (!source) return;
-    document.querySelectorAll('[data-site-logo]').forEach((image) => { image.src = source; });
-    const favicon = document.querySelector('link[rel="icon"]'); if (favicon) favicon.href = source;
+  const resolveLogo = (value) => {
+    if (/^\/?[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*\.(?:svg|png|webp|jpg|jpeg|avif)$/i.test(value || '')) return `${basePath}${value.replace(/^\//, '')}`;
+    try { const url = new URL(value); if (url.protocol === 'https:' && !url.username && !url.password && !/[\s\\]/.test(value)) return url.href; } catch {}
+    return '';
+  };
+  const updateLogo = (organization) => {
+    const websiteSource = resolveLogo(organization?.logo);
+    if (websiteSource) document.querySelectorAll('[data-site-logo]').forEach((image) => { image.src = websiteSource; });
+    const lightTab = resolveLogo(organization?.sameLogoEverywhere ? organization?.logo : organization?.tabLogo) || websiteSource;
+    const darkTab = resolveLogo(organization?.sameLogoEverywhere ? organization?.logo : organization?.tabLogoDark) || lightTab;
+    document.querySelectorAll('link[rel="icon"]').forEach((favicon) => { favicon.href = favicon.media.includes('dark') ? darkTab : lightTab; });
   };
   let scrollFrame = 0;
   const updateScrollUI = () => {
@@ -254,7 +260,7 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
     document.querySelectorAll('[data-campus-ids]').forEach((card)=>{const ids=(card.dataset.campusIds||'').split(',').filter(Boolean);card.hidden=ids.length>0&&!ids.includes(campus.id);});
     renderCommunity(content,campus.id);observeReveals();
   };
-  const selectCampus=(campusId,content,persist=true)=>{const selected=content.campuses.some((item)=>item.id===campusId)?campusId:content.campuses[0]?.id;if(!selected)return;if(persist){localStorage.setItem('openmasjid-campus',selected);const url=new URL(location.href);url.searchParams.set('campus',selected);history.replaceState({},'',url)}updateLogo(content.organization?.logo);renderCampus(content,selected)};
+  const selectCampus=(campusId,content,persist=true)=>{const selected=content.campuses.some((item)=>item.id===campusId)?campusId:content.campuses[0]?.id;if(!selected)return;if(persist){localStorage.setItem('openmasjid-campus',selected);const url=new URL(location.href);url.searchParams.set('campus',selected);history.replaceState({},'',url)}updateLogo(content.organization);renderCampus(content,selected)};
   const showCampusChooser=(content,selectedId)=>{
     if(!campusDialog||!campusDialogOptions||!campusDialogContinue||content.campuses.length<2)return;
     campusDialogOptions.replaceChildren(...content.campuses.map((item,index)=>{

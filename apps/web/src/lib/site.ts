@@ -37,6 +37,10 @@ export function resolveAssetUrl(value: string, basePath: string, fallback = 'ass
   if (/^https:\/\//i.test(safe)) return safe;
   return `${basePath}${(safe || fallback).replace(/^\//, '')}`;
 }
+export function resolveTabLogo(site: { organization: { logo: string; tabLogo?: string; tabLogoDark?: string; sameLogoEverywhere?: boolean } }, basePath: string, dark = false) {
+  const value = site.organization.sameLogoEverywhere ? site.organization.logo : (dark ? site.organization.tabLogoDark : site.organization.tabLogo) || site.organization.logo;
+  return resolveAssetUrl(value, basePath);
+}
 export function localTime(timeZone: string, date = new Date()) {
   return new Intl.DateTimeFormat('en-US', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
 }

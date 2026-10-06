@@ -1,12 +1,14 @@
 ---
 import Base from '../../layouts/Base.astro';
 import site from '../../lib/site.json';
-import { resolveAssetUrl } from '../../lib/site';
+import { resolveAssetUrl, resolveTabLogo } from '../../lib/site';
 const basePath = import.meta.env.BASE_URL;
 const logoUrl = resolveAssetUrl(site.organization.logo, basePath);
+const tabLogoUrl = resolveTabLogo(site, basePath);
+const tabLogoDarkUrl = resolveTabLogo(site, basePath, true);
 const locationLabel = site.campuses.length === 1 ? 'Location' : 'Locations';
 ---
-<Base title={`Give · ${site.organization.name}`} description="Support prayer, learning, care, and community." icon={logoUrl}>
+<Base title={`Give · ${site.organization.name}`} description="Support prayer, learning, care, and community." icon={tabLogoUrl} iconDark={tabLogoDarkUrl}>
   <link rel="stylesheet" href={`${basePath}assets/fonts/fonts.css`} />
   <header class="container site-header"><a class="brand" href={basePath} aria-label={site.organization.name}><img src={logoUrl} data-site-logo alt="" /><span>{site.organization.name}</span></a><nav class="nav" aria-label="Primary"><a href={`${basePath}#prayer`}>Prayer</a><a href={`${basePath}#programs`}>Programs</a><a href={`${basePath}#services`}>Services</a><a href={`${basePath}#community`}>Community</a><a href={`${basePath}#locations`}>{locationLabel}</a></nav><a class="button secondary header-action" href={basePath}>Back home</a></header>
   <main class="giving-main">

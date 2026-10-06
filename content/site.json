@@ -9,9 +9,19 @@
     "phone": "+1 555 0100",
     "website": "https://example.org",
     "logo": "assets/logo.png",
-    "theme": { "accent": "#183c34", "background": "#f6f3ec" }
+    "tabLogo": "assets/logo-tab-light.png",
+    "tabLogoDark": "assets/logo-tab.png",
+    "sameLogoEverywhere": false,
+    "theme": {
+      "accent": "#183c34",
+      "background": "#f6f3ec"
+    }
   },
-  "donation": { "mode": "none", "externalUrl": null, "customHtml": "" },
+  "donation": {
+    "mode": "none",
+    "externalUrl": null,
+    "customHtml": ""
+  },
   "campuses": [
     {
       "id": "demo-central",
@@ -23,10 +33,32 @@
       "longitude": -74.006,
       "phone": "+1 555 0100",
       "email": "hello@example.org",
-      "facilities": ["Prayer hall", "Accessible entrance", "Family space"],
-      "calculation": { "method": "NorthAmerica", "madhab": "Shafi" },
-      "iqamah": { "fajr": "06:15", "dhuhr": "13:30", "asr": "16:30", "maghrib": "18:45", "isha": "20:00" },
-      "jumuah": [{ "label": "First gathering", "time": "13:15" }, { "label": "Second gathering", "time": "14:15" }],
+      "facilities": [
+        "Prayer hall",
+        "Accessible entrance",
+        "Family space"
+      ],
+      "calculation": {
+        "method": "NorthAmerica",
+        "madhab": "Shafi"
+      },
+      "iqamah": {
+        "fajr": "06:15",
+        "dhuhr": "13:30",
+        "asr": "16:30",
+        "maghrib": "18:45",
+        "isha": "20:00"
+      },
+      "jumuah": [
+        {
+          "label": "First gathering",
+          "time": "13:15"
+        },
+        {
+          "label": "Second gathering",
+          "time": "14:15"
+        }
+      ],
       "timetable": []
     },
     {
@@ -39,31 +71,52 @@
       "longitude": -87.6298,
       "phone": "+1 555 0101",
       "email": "hello@example.org",
-      "facilities": ["Prayer hall", "Parking"],
-      "calculation": { "method": "NorthAmerica", "madhab": "Hanafi" },
-      "iqamah": { "fajr": "06:20", "dhuhr": "13:30", "asr": "17:00", "maghrib": "18:45", "isha": "20:15" },
-      "jumuah": [{ "label": "Jumuah", "time": "13:15" }],
+      "facilities": [
+        "Prayer hall",
+        "Parking"
+      ],
+      "calculation": {
+        "method": "NorthAmerica",
+        "madhab": "Hanafi"
+      },
+      "iqamah": {
+        "fajr": "06:20",
+        "dhuhr": "13:30",
+        "asr": "17:00",
+        "maghrib": "18:45",
+        "isha": "20:15"
+      },
+      "jumuah": [
+        {
+          "label": "Jumuah",
+          "time": "13:15"
+        }
+      ],
       "timetable": []
     }
   ],
-  "events": [{
-    "id": "demo-open-house",
-    "title": "Community open house · Demo",
-    "description": "A fictional gathering to discover our community. This is sample content, not a real event.",
-    "startsAt": "2026-10-04T11:00:00-04:00",
-    "endsAt": "2026-10-04T13:00:00-04:00",
-    "campusIds": [],
-    "location": "Demo community hall",
-    "category": "Community"
-  }],
-  "announcements": [{
-    "id": "demo-welcome",
-    "title": "Welcome to the fictional demo",
-    "body": "All bundled addresses, gatherings, and prayer times are illustrative. Do not rely on this demo for worship.",
-    "campusIds": [],
-    "publishedAt": "2026-10-01T00:00:00Z",
-    "expiresAt": null
-  }],
+  "events": [
+    {
+      "id": "demo-open-house",
+      "title": "Community open house \u00b7 Demo",
+      "description": "A fictional gathering to discover our community. This is sample content, not a real event.",
+      "startsAt": "2026-10-04T11:00:00-04:00",
+      "endsAt": "2026-10-04T13:00:00-04:00",
+      "campusIds": [],
+      "location": "Demo community hall",
+      "category": "Community"
+    }
+  ],
+  "announcements": [
+    {
+      "id": "demo-welcome",
+      "title": "Welcome to the fictional demo",
+      "body": "All bundled addresses, gatherings, and prayer times are illustrative. Do not rely on this demo for worship.",
+      "campusIds": [],
+      "publishedAt": "2026-10-01T00:00:00Z",
+      "expiresAt": null
+    }
+  ],
   "programs": [
     {
       "id": "learning-for-life",
@@ -81,7 +134,11 @@
       "title": "Youth & family",
       "description": "Gatherings that help young people and families build faith, friendship, and confidence.",
       "campusIds": [],
-      "details": { "enabled": false, "content": "", "image": "" }
+      "details": {
+        "enabled": false,
+        "content": "",
+        "image": ""
+      }
     }
   ],
   "services": [
@@ -90,7 +147,11 @@
       "title": "Prayer & reflection",
       "description": "Daily prayers, Jumuah gatherings, and quiet space to reconnect throughout the week.",
       "campusIds": [],
-      "details": { "enabled": false, "content": "", "image": "" }
+      "details": {
+        "enabled": false,
+        "content": "",
+        "image": ""
+      }
     },
     {
       "id": "care-and-connection",

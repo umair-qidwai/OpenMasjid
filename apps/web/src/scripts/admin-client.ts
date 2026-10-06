@@ -25,6 +25,9 @@ const applyOrganizationDraft = () => {
     'organization.phone': state.content.organization.phone,
     'organization.website': state.content.organization.website,
     'organization.logo': state.content.organization.logo,
+    'organization.tabLogo': state.content.organization.tabLogo ?? state.content.organization.logo,
+    'organization.tabLogoDark': state.content.organization.tabLogoDark ?? state.content.organization.tabLogo ?? state.content.organization.logo,
+    'organization.sameLogoEverywhere': state.content.organization.sameLogoEverywhere,
     'organization.theme.accent': state.content.organization.theme.accent,
     'organization.theme.background': state.content.organization.theme.background,
     'donation.mode': state.content.donation.mode,
@@ -32,7 +35,7 @@ const applyOrganizationDraft = () => {
     'donation.customHtml': state.content.donation.customHtml,
   }).forEach(([name, value]) => {
     const field = editor.querySelector(`[name="${name}"]`);
-    if (field) field.value = value;
+    if (field) field.type === 'checkbox' ? field.checked = Boolean(value) : field.value = value;
   });
 };
 rebuildEditor();
