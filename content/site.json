@@ -8,9 +8,9 @@
     "email": "hello@example.org",
     "phone": "+1 555 0100",
     "website": "https://example.org",
-    "logo": "assets/logo.png",
+    "logo": "assets/logo-mark.png",
     "tabLogo": "assets/logo-tab-light.png",
-    "tabLogoDark": "assets/logo-tab.png",
+    "tabLogoDark": "assets/logo-tab-dark.png",
     "sameLogoEverywhere": false,
     "theme": {
       "accent": "#183c34",
