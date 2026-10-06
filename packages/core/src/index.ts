@@ -1,5 +1,6 @@
 import { z } from 'zod';
 export { localDateISO, getPrayerDay, getCampusEvents, getCampusAnnouncements, preparePublication, importTimetableCSV } from './prayers';
+export { inspectLogoImage, MAX_LOGO_BYTES, MAX_LOGO_DIMENSION, MAX_LOGO_PIXELS } from './image';
 
 export const MAX_CONTENT_BYTES = 1024 * 1024;
 const text = (max: number) => z.string().trim().min(1).max(max);

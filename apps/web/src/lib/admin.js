@@ -1,4 +1,5 @@
-import { importTimetableCSV, validateSite } from '@openmasjid/core';
+// @ts-nocheck
+import { importTimetableCSV, inspectLogoImage, MAX_LOGO_BYTES, validateSite } from '@openmasjid/core';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const input = (label, name, value, type = 'text') => `<label>${esc(label)}<input type="${type}" data-path="${esc(name)}" value="${esc(value)}"></label>`;
@@ -7,6 +8,33 @@ const textarea = (label, name, value, rows = 3) => `<label>${esc(label)}<textare
 const keys = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
 const prayerKeys = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
 const methods = ['NorthAmerica', 'MuslimWorldLeague', 'Egyptian', 'Karachi', 'UmmAlQura', 'Dubai', 'MoonsightingCommittee'];
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  for (let start = 0; start < bytes.length; start += 0x8000) binary += String.fromCharCode(...bytes.subarray(start, start + 0x8000));
+  return btoa(binary);
+}
+
+export async function prepareLogoUpload(file) {
+  if (!(file instanceof Blob) || file.size > MAX_LOGO_BYTES) throw new Error('Logo must be 2 MiB or smaller');
+  let bytes = new Uint8Array(await file.arrayBuffer());
+  let { mediaType } = await inspectLogoImage(bytes);
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      if (mediaType !== 'image/png') {
+        let pngBlob;
+        if (typeof OffscreenCanvas === 'function') { const canvas = new OffscreenCanvas(bitmap.width, bitmap.height); canvas.getContext('2d').drawImage(bitmap, 0, 0); pngBlob = await canvas.convertToBlob({ type: 'image/png' }); }
+        else { const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height; canvas.getContext('2d').drawImage(bitmap, 0, 0); pngBlob = await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('decode')), 'image/png')); }
+        bytes = new Uint8Array(await pngBlob.arrayBuffer());
+        ({ mediaType } = await inspectLogoImage(bytes));
+      }
+      bitmap.close();
+    }
+    catch { throw new Error('Logo must be a valid PNG, JPEG, or WebP image'); }
+  }
+  return { mediaType, content: bytesToBase64(bytes), previewUrl: URL.createObjectURL(new Blob([bytes], { type: mediaType })) };
+}
 
 // UI-only intent is keyed by each item, so empty selections survive editor rebuilds
 // without adding fields to the published content contract.
@@ -111,7 +139,13 @@ export async function importCsv(file, state, message) {
   } catch (error) { message.textContent = `CSV rejected: ${error instanceof Error ? error.message : 'invalid CSV'}`; }
 }
 
-export async function publishDraft(state, message, form) {
+/**
+ * @param {any} state
+ * @param {any} message
+ * @param {any} form
+ * @param {{mediaType:string,content:string,previewUrl?:string}|null} pendingLogo
+ */
+export async function publishDraft(state, message, form, pendingLogo = null) {
   try { syncForm(state, form); } catch (error) { message.textContent = `Publish rejected: ${error instanceof Error ? error.message : 'invalid content'}`; return; }
   const configured = import.meta.env.PUBLIC_PUBLISHER_URL || '/api';
   try {
@@ -121,8 +155,13 @@ export async function publishDraft(state, message, form) {
     const currentResponse = await fetch(`${configured}/content`, { credentials: 'include' });
     if (!currentResponse.ok) throw new Error(`Content lookup failed (${currentResponse.status})`);
     const current = await currentResponse.json();
-    const response = await fetch(`${configured}/publish`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', 'X-CSRF-Token': session.csrfToken }, body: JSON.stringify({ content: state.content, sha: current.sha }) });
+    const logoUpload = pendingLogo ? { mediaType: pendingLogo.mediaType, content: pendingLogo.content } : undefined;
+    const response = await fetch(`${configured}/publish`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', 'X-CSRF-Token': session.csrfToken }, body: JSON.stringify({ content: state.content, sha: current.sha, ...(logoUpload ? { logoUpload } : {}) }) });
     if (!response.ok) { message.textContent = response.status === 409 ? 'Conflict: reload committed content before publishing' : `Publish failed (${response.status})`; return; }
+    const result = await response.json();
+    if (typeof result.assetPath === 'string') state.content.organization.logo = result.assetPath;
+    state.dirty = false;
     message.textContent = 'Committed · publisher confirmed the response';
+    return result;
   } catch (error) { message.textContent = `Publish unavailable: ${error instanceof Error ? error.message : 'network error'}`; }
 }

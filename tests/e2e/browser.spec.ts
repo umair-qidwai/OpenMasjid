@@ -126,6 +126,26 @@ test.describe('admin editor browser UX', () => {
     await expect(page.getByRole('heading', { name: 'Shape your community\'s front door.' })).toBeVisible();
   });
 
+  test('previews a directly selected organization logo and lets the admin cancel it', async ({ page }) => {
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaGD4DwAChAGA+gVWHQAAAABJRU5ErkJggg==', 'base64');
+    await page.locator('#logo-upload').setInputFiles({ name: 'masjid-logo.png', mimeType: 'image/png', buffer: png });
+    await expect(page.locator('#logo-upload-status')).toContainText('masjid-logo.png selected');
+    await expect(page.locator('#editor-message')).toContainText('New logo ready to publish');
+    const selectedPreview = await page.locator('#logo-preview').getAttribute('src');
+    expect(selectedPreview).toMatch(/^blob:/);
+    await expect(page.locator('#cancel-logo-upload')).toBeVisible();
+
+    await page.locator('#logo-upload').setInputFiles({ name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('not an image') });
+    await expect(page.locator('#logo-upload-status')).toContainText('valid PNG, JPEG, or WebP');
+    await expect(page.locator('#logo-preview')).toHaveAttribute('src', selectedPreview!);
+    await expect(page.locator('#cancel-logo-upload')).toBeVisible();
+
+    await page.getByText('Use an existing image URL or asset path instead').click();
+    await page.getByLabel('Logo location').fill('https://cdn.example.org/new-logo.png');
+    await expect(page.locator('#cancel-logo-upload')).toBeHidden();
+    await expect(page.locator('#logo-upload-status')).toContainText('Upload cancelled');
+  });
+
   test('configures an HTTPS donation destination in the local draft', async ({ page }) => {
     await page.getByRole('button', { name: 'Giving' }).click();
     await page.getByLabel('Donation mode').selectOption('external');

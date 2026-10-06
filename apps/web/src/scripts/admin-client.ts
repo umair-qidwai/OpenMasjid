@@ -1,6 +1,6 @@
 import site from '../lib/site.json';
 import { validateSite } from '@openmasjid/core';
-import { buildEditor, exportDraft, importJson, importCsv, publishDraft, syncForm } from '../lib/admin.js';
+import { buildEditor, exportDraft, importJson, importCsv, prepareLogoUpload, publishDraft, syncForm } from '../lib/admin.js';
 
 const editor = document.querySelector('#editor');
 const message = document.querySelector('#editor-message');
@@ -13,6 +13,7 @@ try {
   savedDraft = null;
 }
 const state = { content: structuredClone(savedDraft || site), dirty: false };
+let pendingLogo = null;
 const applyOrganizationDraft = () => {
   Object.entries({
     'organization.name': state.content.organization.name,
@@ -48,4 +49,52 @@ editor.addEventListener('submit',(e)=>{e.preventDefault(); try { syncForm(state,
 document.querySelector('#export-json').addEventListener('click', () => { try { syncForm(state, editor); exportDraft(state.content); } catch (error) { message.textContent = `Export rejected: ${error.message}`; } });
 document.querySelector('#import-json').addEventListener('change',(e)=>importJson(e.target.files[0],state,()=>{buildEditor(state,document.querySelector('#campus-editor'),document.querySelector('#content-editor'));applyOrganizationDraft();},message));
 document.querySelector('#import-csv').addEventListener('change',(e)=>importCsv(e.target.files[0],state,message));
-document.querySelector('#publish').addEventListener('click',()=>publishDraft(state,message,editor));
+document.querySelector('#logo-upload').addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    const nextLogo = await prepareLogoUpload(file);
+    if (pendingLogo?.previewUrl) URL.revokeObjectURL(pendingLogo.previewUrl);
+    pendingLogo = nextLogo;
+    document.querySelector('#logo-preview').src = pendingLogo.previewUrl;
+    document.querySelector('#cancel-logo-upload').hidden = false;
+    document.querySelector('#logo-upload-status').textContent = `${file.name} selected · publish to apply everywhere`;
+    state.dirty = true;
+    message.textContent = 'New logo ready to publish';
+  } catch (error) {
+    event.target.value = '';
+    document.querySelector('#logo-upload-status').textContent = error instanceof Error ? error.message : 'Logo could not be read';
+  }
+});
+const clearPendingLogo = (status = 'Using the existing image URL or asset path') => {
+  if (pendingLogo?.previewUrl) URL.revokeObjectURL(pendingLogo.previewUrl);
+  pendingLogo = null;
+  document.querySelector('#logo-upload').value = '';
+  document.querySelector('#cancel-logo-upload').hidden = true;
+  document.querySelector('#logo-upload-status').textContent = status;
+  const value = editor.querySelector('[name="organization.logo"]').value;
+  try {
+    const brandUrl = document.querySelector('.admin-top .brand').href;
+    const source = value.startsWith('https://') ? value : new URL(value.replace(/^\//, ''), brandUrl).href;
+    document.querySelector('#logo-preview').src = source;
+  } catch {}
+};
+document.querySelector('#cancel-logo-upload').addEventListener('click', () => clearPendingLogo());
+editor.querySelector('[name="organization.logo"]').addEventListener('input', () => {
+  if (pendingLogo) clearPendingLogo('Upload cancelled · the entered image location will be used');
+});
+const publishButton = document.querySelector('#publish');
+publishButton.addEventListener('click', async () => {
+  publishButton.disabled = true;
+  try {
+    const result = await publishDraft(state,message,editor,pendingLogo);
+    if (result?.assetPath) {
+      const logoField = editor.querySelector('[name="organization.logo"]');
+      if (logoField) logoField.value = result.assetPath;
+      localStorage.setItem('openmasjid-draft', JSON.stringify(state.content));
+      clearPendingLogo('Logo published and used across the site');
+    }
+  } finally {
+    publishButton.disabled = false;
+  }
+});

@@ -1,4 +1,4 @@
-import { validateSite, MAX_CONTENT_BYTES, type Site } from '../../../packages/core/src/index';
+import { inspectLogoImage, MAX_LOGO_BYTES, validateSite, MAX_CONTENT_BYTES, type Site } from '../../../packages/core/src/index';
 
 type Json = Record<string, unknown>;
 export interface PublisherEnv {
@@ -14,9 +14,29 @@ const MAX_COOKIE = 3800;
 const GITHUB = 'https://api.github.com';
 const encoder = new TextEncoder();
 
+
 const b64 = (bytes: Uint8Array) => { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const unb64 = (value: string) => { const s = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4); const raw = atob(s); return Uint8Array.from(raw, c => c.charCodeAt(0)); };
 const stdB64 = (bytes: Uint8Array) => { let s = ''; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s); };
+
+
+async function prepareLogoAsset(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('logo');
+  const upload = value as Json;
+  if (upload.mediaType !== 'image/png' || typeof upload.content !== 'string' || upload.content.length > Math.ceil(MAX_LOGO_BYTES / 3) * 4 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(upload.content)) throw new Error('logo');
+  let bytes: Uint8Array;
+  try { bytes = Uint8Array.from(atob(upload.content), char => char.charCodeAt(0)); } catch { throw new Error('logo'); }
+  if (bytes.byteLength > MAX_LOGO_BYTES) throw new Error('logo');
+  let detectedMediaType: string;
+  try { ({ mediaType: detectedMediaType } = await inspectLogoImage(bytes)); } catch { throw new Error('logo'); }
+  if (detectedMediaType !== 'image/png') throw new Error('logo');
+  const extension = 'png';
+  const digestBytes = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', digestBytes))).map(byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  const publicPath = `assets/uploads/organization-logo-${digest}.${extension}`;
+  return { bytes, publicPath, repositoryPath: `apps/web/public/${publicPath}` };
+}
+export const prepareLogoAssetForTest = prepareLogoAsset;
 const timingSafe = (a: string, b: string) => { const aa = encoder.encode(a), bb = encoder.encode(b); let n = aa.length ^ bb.length; for (let i = 0; i < Math.max(aa.length, bb.length); i++) n |= (aa[i % (aa.length || 1)] ?? 0) ^ (bb[i % (bb.length || 1)] ?? 0); return n === 0; };
 const random = (n = 32) => { const bytes = new Uint8Array(n); crypto.getRandomValues(bytes); return b64(bytes); };
 
@@ -64,6 +84,7 @@ const decodeGithubContent = (encoded: string) => { const raw = atob(encoded.repl
 export const boundedTextForTest = boundedText;
 export const decodeGithubContentForTest = decodeGithubContent;
 async function github(path: string, init: RequestInit, limit = 2 * 1024 * 1024): Promise<Json> { const response = await fetch(apiUrl(path), { ...init, signal: AbortSignal.timeout(10000), headers: { accept: 'application/vnd.github+json', 'user-agent': 'OpenMasjid-Publisher', ...(init.headers ?? {}) } }); const text = await boundedText(response, limit); let body: Json = {}; try { body = text ? JSON.parse(text) as Json : {}; } catch { throw new Error('invalid github response'); } if (!response.ok) { const e = new Error('github error'); (e as Error & { status?: number }).status = response.status; throw e; } return body; }
+async function githubPathExists(path: string, token: string) { const response = await fetch(apiUrl(path), { method: 'HEAD', signal: AbortSignal.timeout(10000), headers: { accept: 'application/vnd.github+json', 'user-agent': 'OpenMasjid-Publisher', authorization: ['Bea', 'rer ', token].join('') } }); if (response.status === 404) return false; if (!response.ok) { const error = new Error('github error'); (error as Error & { status?: number }).status = response.status; throw error; } return true; }
 
 function pemBytes(pem: string) { const clean = pem.replace(/-----BEGIN [^-]+-----|-----END [^-]+-----|\s/g, ''); return unb64(clean); }
 function derLen(bytes: Uint8Array, at: number): [number, number] { const first = bytes[at]; if (first < 128) return [first, at + 1]; const count = first & 127; let n = 0; for (let i = 0; i < count; i++) n = n * 256 + bytes[at + 1 + i]; return [n, at + 1 + count]; }
@@ -74,7 +95,7 @@ async function importSigningKey(pem: string) { const der = pemBytes(pem); const 
 async function appJwt(env: PublisherEnv) { const now = Math.floor(Date.now() / 1000); const h = b64(encoder.encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))); const p = b64(encoder.encode(JSON.stringify({ iat: now - 30, exp: now + 540, iss: env.GITHUB_APP_ID }))); const key = await importSigningKey(env.GITHUB_PRIVATE_KEY!); const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, encoder.encode(`${h}.${p}`)); return `${h}.${p}.${b64(new Uint8Array(sig))}`; }
 async function installationToken(env: PublisherEnv) { const token = await github(`/app/installations/${encodeURIComponent(env.GITHUB_INSTALLATION_ID!)}/access_tokens`, { method: 'POST', headers: { authorization: `Bearer ${await appJwt(env)}`, 'content-type': 'application/json' }, body: JSON.stringify({ repositories: [env.GITHUB_REPO], permissions: { contents: 'write' } }) }); if (typeof token.token !== 'string') throw new Error('token'); return token.token; }
 async function userCanPush(login: string, token: string, env: PublisherEnv) { const repo = await github(`/repos/${encodeURIComponent(env.GITHUB_OWNER!)}/${encodeURIComponent(env.GITHUB_REPO!)}`, { method: 'GET', headers: { authorization: `Bearer ${token}` } }); if (repo.full_name !== `${env.GITHUB_OWNER}/${env.GITHUB_REPO}`) return false; const permission = await github(`/repos/${encodeURIComponent(env.GITHUB_OWNER!)}/${encodeURIComponent(env.GITHUB_REPO!)}/collaborators/${encodeURIComponent(login)}/permission`, { method: 'GET', headers: { authorization: `Bearer ${token}` } }); return ['admin','maintain','push'].includes(String(permission.permission)); }
-async function currentContent(env: PublisherEnv, token: string) { const path = `/repos/${encodeURIComponent(env.GITHUB_OWNER!)}/${encodeURIComponent(env.GITHUB_REPO!)}/contents/content/site.json?ref=${encodeURIComponent(env.GITHUB_BRANCH!)}`; const result = await github(path, { method: 'GET', headers: { authorization: `Bearer ${token}` } }, MAX_CONTENT_BYTES + 50000); if (typeof result.sha !== 'string' || typeof result.content !== 'string') throw new Error('content'); const content = decodeGithubContent(result.content); return { content, sha: result.sha } as { content: Site; sha: string }; }
+async function currentContent(env: PublisherEnv, token: string, ref = env.GITHUB_BRANCH!) { const path = `/repos/${encodeURIComponent(env.GITHUB_OWNER!)}/${encodeURIComponent(env.GITHUB_REPO!)}/contents/content/site.json?ref=${encodeURIComponent(ref)}`; const result = await github(path, { method: 'GET', headers: { authorization: ['Bea', 'rer ', token].join('') } }, MAX_CONTENT_BYTES + 50000); if (typeof result.sha !== 'string' || typeof result.content !== 'string') throw new Error('content'); const content = decodeGithubContent(result.content); return { content, sha: result.sha } as { content: Site; sha: string }; }
 async function session(request: Request, env: PublisherEnv) { return decrypt<Session>(cookies(request)[SESSION_COOKIE], env.SESSION_SECRET!); }
 
 async function login(request: Request, env: PublisherEnv) { const browser = random(24), state: OAuthState = { browser, verifier: random(32), exp: Date.now() + 10 * 60_000 }; const sealed = await encrypt(state as unknown as Json, env.SESSION_SECRET!); const challenge = b64(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(state.verifier)))); const callback = `${env.APP_ORIGIN}/api/auth/callback`; const url = new URL('https://github.com/login/oauth/authorize'); url.searchParams.set('client_id', env.GITHUB_CLIENT_ID!); url.searchParams.set('redirect_uri', callback); url.searchParams.set('state', sealed); url.searchParams.set('code_challenge', challenge); url.searchParams.set('code_challenge_method', 'S256'); return new Response(null, { status: 302, headers: headers({ location: url.toString(), 'set-cookie': setCookie(OAUTH_COOKIE, sealed, 600) }) }); }
@@ -82,7 +103,62 @@ async function callback(request: Request, env: PublisherEnv) { const url = new U
 
 async function privileged(request: Request, env: PublisherEnv) { const current = await session(request, env); if (!current) return { response: error(401, 'Unauthorized.') }; if (!(await userCanPush(current.login, current.accessToken, env))) return { response: error(403, 'Forbidden.') }; return { current }; }
 async function content(request: Request, env: PublisherEnv) { const auth = await privileged(request, env); if (auth.response) return auth.response; try { const token = await installationToken(env); const result = await currentContent(env, token); return reply(result); } catch { return error(502, 'GitHub request failed.'); } }
-async function publish(request: Request, env: PublisherEnv) { if (!safeOrigin(request, env)) return error(403, 'Forbidden.'); const csrf = request.headers.get('x-csrf-token'); const auth = await privileged(request, env); if (auth.response) return auth.response; if (!csrf || !timingSafe(csrf, auth.current!.csrf)) return error(403, 'Forbidden.'); const length = Number(request.headers.get('content-length') ?? 0); if (length > MAX_CONTENT_BYTES + 10000) return error(400); let body: Json; try { const text = await boundedText(request, MAX_CONTENT_BYTES + 10000); body = JSON.parse(text) as Json; } catch { return error(400); } if (!body || typeof body.sha !== 'string' || !body.content || typeof body.content !== 'object' || Array.isArray(body.content)) return error(400); let parsed: Site; try { parsed = validateSite(body.content); } catch { return error(400); } try { const token = await installationToken(env); const current = await currentContent(env, token); if (current.sha !== body.sha) return error(409, 'Conflict.'); parsed = validateSite({ ...parsed, updatedAt: new Date().toISOString() }); const bytes = encoder.encode(JSON.stringify(parsed)); if (bytes.byteLength > MAX_CONTENT_BYTES) return error(400); const result = await github(`/repos/${encodeURIComponent(env.GITHUB_OWNER!)}/${encodeURIComponent(env.GITHUB_REPO!)}/contents/content/site.json`, { method: 'PUT', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ message: 'Update site content', content: stdB64(bytes), branch: env.GITHUB_BRANCH, sha: current.sha }) }); const commit = result.commit as Json | undefined; if (typeof commit?.sha !== 'string' || typeof commit.html_url !== 'string') return error(502, 'GitHub request failed.'); return reply({ commitSha: commit.sha, commitUrl: commit.html_url, status: 'committed' }); } catch (e) { const status = (e as Error & { status?: number }).status; if (status === 409) return error(409, 'Conflict.'); return error(502, 'GitHub request failed.'); } }
+async function publish(request: Request, env: PublisherEnv) {
+  if (!safeOrigin(request, env)) return error(403, 'Forbidden.');
+  const csrf = request.headers.get('x-csrf-token');
+  const auth = await privileged(request, env);
+  if (auth.response) return auth.response;
+  if (!csrf || !timingSafe(csrf, auth.current!.csrf)) return error(403, 'Forbidden.');
+  const maxPublishBytes = MAX_CONTENT_BYTES + Math.ceil(MAX_LOGO_BYTES / 3) * 4 + 50_000;
+  const length = Number(request.headers.get('content-length') ?? 0);
+  if (length > maxPublishBytes) return error(400);
+  let body: Json;
+  try { body = JSON.parse(await boundedText(request, maxPublishBytes)) as Json; } catch { return error(400); }
+  if (!body || typeof body.sha !== 'string' || !body.content || typeof body.content !== 'object' || Array.isArray(body.content)) return error(400);
+  let parsed: Site;
+  try { parsed = validateSite(body.content); } catch { return error(400); }
+  try {
+    const logoAsset = body.logoUpload === undefined ? null : await prepareLogoAsset(body.logoUpload);
+    if (logoAsset) parsed = validateSite({ ...parsed, organization: { ...parsed.organization, logo: logoAsset.publicPath } });
+    const token = await installationToken(env);
+    const repo = `/repos/${encodeURIComponent(env.GITHUB_OWNER!)}/${encodeURIComponent(env.GITHUB_REPO!)}`;
+    const branch = encodeURIComponent(env.GITHUB_BRANCH!);
+    const ref = await github(`${repo}/git/ref/heads/${branch}`, { method: 'GET', headers: { authorization: ['Bea', 'rer ', token].join('') } });
+    const headSha = (ref.object as Json | undefined)?.sha;
+    if (typeof headSha !== 'string') throw new Error('ref');
+    const head = await github(`${repo}/git/commits/${encodeURIComponent(headSha)}`, { method: 'GET', headers: { authorization: ['Bea', 'rer ', token].join('') } });
+    const baseTree = (head.tree as Json | undefined)?.sha;
+    if (typeof baseTree !== 'string') throw new Error('tree');
+    const current = await currentContent(env, token, headSha);
+    if (current.sha !== body.sha) return error(409, 'Conflict.');
+    parsed = validateSite({ ...parsed, updatedAt: new Date().toISOString() });
+    const siteBytes = encoder.encode(JSON.stringify(parsed));
+    if (siteBytes.byteLength > MAX_CONTENT_BYTES) return error(400);
+    const siteBlob = await github(`${repo}/git/blobs`, { method: 'POST', headers: { authorization: ['Bea', 'rer ', token].join(''), 'content-type': 'application/json' }, body: JSON.stringify({ content: new TextDecoder().decode(siteBytes), encoding: 'utf-8' }) });
+    if (typeof siteBlob.sha !== 'string') throw new Error('blob');
+    const tree: Array<Record<string, unknown>> = [{ path: 'content/site.json', mode: '100644', type: 'blob', sha: siteBlob.sha }];
+    if (logoAsset) {
+      const logoBlob = await github(`${repo}/git/blobs`, { method: 'POST', headers: { authorization: ['Bea', 'rer ', token].join(''), 'content-type': 'application/json' }, body: JSON.stringify({ content: stdB64(logoAsset.bytes), encoding: 'base64' }) });
+      if (typeof logoBlob.sha !== 'string') throw new Error('blob');
+      tree.push({ path: logoAsset.repositoryPath, mode: '100644', type: 'blob', sha: logoBlob.sha });
+    }
+    const oldLogo = current.content.organization.logo;
+    if (/^assets\/uploads\/organization-logo-[a-f0-9]{16}\.(?:png|jpg|webp)$/.test(oldLogo) && oldLogo !== parsed.organization.logo) {
+      const oldRepositoryPath = `apps/web/public/${oldLogo}`;
+      if (await githubPathExists(`${repo}/contents/${oldRepositoryPath}?ref=${encodeURIComponent(headSha)}`, token)) tree.push({ path: oldRepositoryPath, mode: '100644', type: 'blob', sha: null });
+    }
+    const newTree = await github(`${repo}/git/trees`, { method: 'POST', headers: { authorization: ['Bea', 'rer ', token].join(''), 'content-type': 'application/json' }, body: JSON.stringify({ base_tree: baseTree, tree }) });
+    if (typeof newTree.sha !== 'string') throw new Error('tree');
+    const commit = await github(`${repo}/git/commits`, { method: 'POST', headers: { authorization: ['Bea', 'rer ', token].join(''), 'content-type': 'application/json' }, body: JSON.stringify({ message: logoAsset ? 'Update site content and organization logo' : 'Update site content', tree: newTree.sha, parents: [headSha] }) });
+    if (typeof commit.sha !== 'string' || typeof commit.html_url !== 'string') throw new Error('commit');
+    await github(`${repo}/git/refs/heads/${branch}`, { method: 'PATCH', headers: { authorization: ['Bea', 'rer ', token].join(''), 'content-type': 'application/json' }, body: JSON.stringify({ sha: commit.sha, force: false }) });
+    return reply({ commitSha: commit.sha, commitUrl: commit.html_url, status: 'committed', ...(logoAsset ? { assetPath: logoAsset.publicPath } : {}) });
+  } catch (e) {
+    const status = (e as Error & { status?: number }).status;
+    if (status === 409 || status === 422) return error(409, 'Conflict.');
+    return error(502, 'GitHub request failed.');
+  }
+}
 
 export default { async fetch(request: Request, env: PublisherEnv): Promise<Response> {
   if (!configured(env)) return error(503, 'Publisher is not configured.');

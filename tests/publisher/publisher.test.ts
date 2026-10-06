@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
-import worker, { type PublisherEnv, boundedTextForTest, decodeGithubContentForTest } from '../../services/publisher/src/index';
+import { crc32 } from 'node:zlib';
+import worker, { type PublisherEnv, boundedTextForTest, decodeGithubContentForTest, encryptForTest, prepareLogoAssetForTest } from '../../services/publisher/src/index';
 import { site } from './fixture';
 
 const testPrivateKey = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
@@ -108,4 +109,87 @@ describe('publisher bounded I/O and encoding', () => {
     const encoded = Buffer.from(JSON.stringify(value), 'utf8').toString('base64');
     expect(decodeGithubContentForTest(encoded).organization.name).toBe('Masjid café مسجد');
   });
+});
+
+describe('publisher logo assets', () => {
+  it('derives an immutable repository path from verified image bytes', async () => {
+    const bytes = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaGD4DwAChAGA+gVWHQAAAABJRU5ErkJggg==', 'base64'));
+    const asset = await prepareLogoAssetForTest({ mediaType: 'image/png', content: Buffer.from(bytes).toString('base64') });
+    expect(asset.publicPath).toMatch(/^assets\/uploads\/organization-logo-[a-f0-9]{16}\.png$/);
+    expect(asset.repositoryPath).toBe(`apps/web/public/${asset.publicPath}`);
+    expect(asset.bytes).toEqual(bytes);
+  });
+
+  it('rejects malformed, unsupported, and oversized logo payloads', async () => {
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: 'bm90IGFuIGltYWdl' })).rejects.toThrow('logo');
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/svg+xml', content: 'PHN2Zz48L3N2Zz4=' })).rejects.toThrow('logo');
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: 'iVBORw0KGgo=' })).rejects.toThrow('logo');
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: 'A'.repeat(Math.ceil((2 * 1024 * 1024) / 3) * 4 + 4) })).rejects.toThrow('logo');
+    const hugeDimensions = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaGD4DwAChAGA+gVWHQAAAABJRU5ErkJggg==', 'base64');
+    hugeDimensions.writeUInt32BE(5000, 16);
+    hugeDimensions.writeUInt32BE(crc32(hugeDimensions.subarray(12, 29)), 29);
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: hugeDimensions.toString('base64') })).rejects.toThrow('logo');
+    const invalidBitDepth = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaGD4DwAChAGA+gVWHQAAAABJRU5ErkJggg==', 'base64');
+    invalidBitDepth[24] = 3;
+    invalidBitDepth.writeUInt32BE(crc32(invalidBitDepth.subarray(12, 29)), 29);
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: invalidBitDepth.toString('base64') })).rejects.toThrow('logo');
+    const invalidPixels = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaGD4DwAChAGA+gVWHQAAAABJRU5ErkJggg==', 'base64');
+    invalidPixels[45] ^= 0xff;
+    invalidPixels.writeUInt32BE(crc32(invalidPixels.subarray(37, 54)), 54);
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: invalidPixels.toString('base64') })).rejects.toThrow('logo');
+    const validPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaGD4DwAChAGA+gVWHQAAAABJRU5ErkJggg==', 'base64');
+    const duplicateHeader = Buffer.concat([validPng.subarray(0, 33), validPng.subarray(8, 33), validPng.subarray(33)]);
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: duplicateHeader.toString('base64') })).rejects.toThrow('logo');
+    const pngChunk = (type: string, data: Buffer) => { const name = Buffer.from(type); const chunk = Buffer.alloc(12 + data.length); chunk.writeUInt32BE(data.length, 0); name.copy(chunk, 4); data.copy(chunk, 8); chunk.writeUInt32BE(crc32(Buffer.concat([name, data])), 8 + data.length); return chunk; };
+    const unknownCritical = Buffer.concat([validPng.subarray(0, 33), pngChunk('ABCD', Buffer.alloc(0)), validPng.subarray(33)]);
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: unknownCritical.toString('base64') })).rejects.toThrow('logo');
+    const palette = pngChunk('PLTE', Buffer.from([0, 0, 0]));
+    const duplicatePalette = Buffer.concat([validPng.subarray(0, 33), palette, palette, validPng.subarray(33)]);
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: duplicatePalette.toString('base64') })).rejects.toThrow('logo');
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/jpeg', content: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaGD4DwAChAGA+gVWHQAAAABJRU5ErkJggg==', 'base64').toString('base64') })).rejects.toThrow('logo');
+    const jpegLike = Buffer.from([0xff,0xd8,0xff,0xc0,0x00,0x08,0x08,0x00,0x01,0x00,0x01,0x01,0xff,0xda,0xff,0xd9]);
+    await expect(prepareLogoAssetForTest({ mediaType: 'image/png', content: jpegLike.toString('base64') })).rejects.toThrow('logo');
+  });
+
+  it('commits the logo and site content together in one Git commit', async () => {
+    const csrf = 'csrf-token';
+    const session = await encryptForTest({ login: 'alice', accessToken: 'user-token', csrf, exp: Date.now() + 60_000 }, env.SESSION_SECRET);
+    const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgaGD4DwAChAGA+gVWHQAAAABJRU5ErkJggg==', 'base64'));
+    let committedTree: any;
+    const previousLogo = 'assets/uploads/organization-logo-aaaaaaaaaaaaaaaa.png';
+    const currentSite = { ...site, organization: { ...site.organization, logo: previousLogo } };
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/repos/openmasjid/site')) return Response.json({ full_name: 'openmasjid/site' });
+      if (url.includes('/collaborators/alice/permission')) return Response.json({ permission: 'push' });
+      if (url.includes('/app/installations/123/access_tokens')) return Response.json({ token: 'installation-token' });
+      if (url.includes('/contents/content/site.json')) { expect(url).toContain('ref=head-sha'); return Response.json({ sha: 'content-sha', content: Buffer.from(JSON.stringify(currentSite)).toString('base64') }); }
+      if (url.includes('/contents/apps/web/public/assets/uploads/organization-logo-aaaaaaaaaaaaaaaa.png')) { expect(init?.method).toBe('HEAD'); return new Response(null, { status: 200 }); }
+      if (url.endsWith('/git/ref/heads/main')) return Response.json({ object: { sha: 'head-sha' } });
+      if (url.endsWith('/git/commits/head-sha')) return Response.json({ tree: { sha: 'base-tree' } });
+      if (url.endsWith('/git/blobs')) {
+        const body = JSON.parse(String(init?.body));
+        return Response.json({ sha: body.encoding === 'base64' ? 'logo-blob' : 'site-blob' });
+      }
+      if (url.endsWith('/git/trees')) { committedTree = JSON.parse(String(init?.body)); return Response.json({ sha: 'new-tree' }); }
+      if (url.endsWith('/git/commits')) return Response.json({ sha: 'new-commit', html_url: 'https://github.com/openmasjid/site/commit/new-commit' });
+      if (url.endsWith('/git/refs/heads/main') && init?.method === 'PATCH') return Response.json({ object: { sha: 'new-commit' } });
+      throw new Error(`unexpected GitHub request: ${url}`);
+    }));
+
+    const response = await worker.fetch(json({
+      sha: 'content-sha', content: site,
+      logoUpload: { mediaType: 'image/png', content: Buffer.from(png).toString('base64') },
+    }, { path: '/api/publish', method: 'POST', headers: { origin: env.APP_ORIGIN, cookie: `openmasjid_session=${session}`, 'x-csrf-token': csrf } }), configured());
+
+    expect(response.status).toBe(200);
+    const result = await response.json() as any;
+    expect(result.assetPath).toMatch(/^assets\/uploads\/organization-logo-[a-f0-9]{16}\.png$/);
+    expect(committedTree.base_tree).toBe('base-tree');
+    expect(committedTree.tree).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'content/site.json', sha: 'site-blob' }),
+      expect.objectContaining({ path: `apps/web/public/${result.assetPath}`, sha: 'logo-blob' }),
+      expect.objectContaining({ path: `apps/web/public/${previousLogo}`, sha: null }),
+    ]));
+  }, 15_000);
 });
