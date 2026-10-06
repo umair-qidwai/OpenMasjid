@@ -10,7 +10,7 @@
     "website": "https://example.org",
     "logo": "assets/logo-mark.png",
     "tabLogo": "assets/logo-tab-light.png",
-    "tabLogoDark": "assets/logo-tab-dark.png",
+    "tabLogoDark": "assets/logo-mark-light.png",
     "sameLogoEverywhere": false,
     "theme": {
       "accent": "#183c34",
