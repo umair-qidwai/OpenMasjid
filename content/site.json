@@ -2,20 +2,20 @@
   "schemaVersion": 1,
   "updatedAt": "2026-10-01T00:00:00Z",
   "organization": {
-    "name": "OpenMasjid · Fictional Demo",
+    "name": "OpenMasjid",
     "tagline": "A place to belong",
     "description": "Fictional sample content for development only. This is not a live mosque or an authoritative prayer schedule.",
     "email": "hello@example.org",
     "phone": "+1 555 0100",
     "website": "https://example.org",
-    "logo": "assets/logo.svg",
+    "logo": "assets/logo.png",
     "theme": { "accent": "#183c34", "background": "#f6f3ec" }
   },
   "donation": { "mode": "none", "externalUrl": null, "customHtml": "" },
   "campuses": [
     {
       "id": "demo-central",
-      "name": "Central · Fictional Demo",
+      "name": "Template",
       "address": "100 Example Lane (fictional)",
       "city": "Demo City",
       "timezone": "America/New_York",
@@ -31,7 +31,7 @@
     },
     {
       "id": "demo-riverside",
-      "name": "Riverside · Fictional Demo",
+      "name": "Template",
       "address": "200 Sample River Road (fictional)",
       "city": "Demo City",
       "timezone": "America/Chicago",
