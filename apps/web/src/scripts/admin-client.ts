@@ -14,6 +14,8 @@ try {
 }
 const state = { content: structuredClone(savedDraft || site), dirty: false };
 let pendingLogo = null;
+const editorRoots = () => [document.querySelector('#campus-editor'), document.querySelector('#content-editor'), document.querySelector('#program-editor'), document.querySelector('#service-editor')];
+const rebuildEditor = () => buildEditor(state, ...editorRoots());
 const applyOrganizationDraft = () => {
   Object.entries({
     'organization.name': state.content.organization.name,
@@ -33,7 +35,7 @@ const applyOrganizationDraft = () => {
     if (field) field.value = value;
   });
 };
-buildEditor(state, document.querySelector('#campus-editor'), document.querySelector('#content-editor'));
+rebuildEditor();
 applyOrganizationDraft();
 editor.querySelector('[name="donation.mode"]')?.addEventListener('change', (event) => {
   const mode = event.target.value;
@@ -41,13 +43,15 @@ editor.querySelector('[name="donation.mode"]')?.addEventListener('change', (even
   if (mode !== 'custom') editor.querySelector('[name="donation.customHtml"]').value = '';
 });
 document.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => { document.querySelectorAll('[data-tab],.tab').forEach((el) => el.classList.remove('active')); button.classList.add('active'); document.querySelector(`[data-panel="${button.dataset.tab}"]`).classList.add('active'); }));
-document.querySelector('#add-campus').addEventListener('click', () => { state.content.campuses.push({id:`campus-${state.content.campuses.length+1}`,name:'New campus',address:'',city:'',timezone:'America/New_York',latitude:0,longitude:0,phone:'',email:'',facilities:[],calculation:{method:'NorthAmerica',madhab:'Shafi'},iqamah:{fajr:'05:30',dhuhr:'13:00',asr:'16:00',maghrib:'19:00',isha:'20:30'},jumuah:[],timetable:[]}); buildEditor(state,document.querySelector('#campus-editor'),document.querySelector('#content-editor')); });
-document.querySelector('#add-event').addEventListener('click', () => { state.content.events.push({id:`event-${Date.now()}`,title:'New event',description:'',startsAt:new Date().toISOString(),endsAt:new Date(Date.now()+3*60*60*1000).toISOString(),campusIds:[],location:'',category:'Community'}); buildEditor(state,document.querySelector('#campus-editor'),document.querySelector('#content-editor')); });
-document.querySelector('#add-announcement').addEventListener('click', () => { state.content.announcements.push({id:`announcement-${Date.now()}`,title:'New announcement',body:'',campusIds:[],publishedAt:new Date().toISOString(),expiresAt:null}); buildEditor(state,document.querySelector('#campus-editor'),document.querySelector('#content-editor')); });
+document.querySelector('#add-campus').addEventListener('click', () => { state.content.campuses.push({id:`campus-${state.content.campuses.length+1}`,name:'New campus',address:'',city:'',timezone:'America/New_York',latitude:0,longitude:0,phone:'',email:'',facilities:[],calculation:{method:'NorthAmerica',madhab:'Shafi'},iqamah:{fajr:'05:30',dhuhr:'13:00',asr:'16:00',maghrib:'19:00',isha:'20:30'},jumuah:[],timetable:[]}); rebuildEditor(); });
+document.querySelector('#add-event').addEventListener('click', () => { state.content.events.push({id:`event-${Date.now()}`,title:'New event',description:'',startsAt:new Date().toISOString(),endsAt:new Date(Date.now()+3*60*60*1000).toISOString(),campusIds:[],location:'',category:'Community'}); rebuildEditor(); });
+document.querySelector('#add-announcement').addEventListener('click', () => { state.content.announcements.push({id:`announcement-${Date.now()}`,title:'New announcement',body:'',campusIds:[],publishedAt:new Date().toISOString(),expiresAt:null}); rebuildEditor(); });
+document.querySelector('#add-program').addEventListener('click', () => { state.content.programs.push({id:`program-${Date.now()}`,title:'New program',description:'Describe this program',campusIds:[],details:{enabled:false,content:''}}); rebuildEditor(); });
+document.querySelector('#add-service').addEventListener('click', () => { state.content.services.push({id:`service-${Date.now()}`,title:'New service',description:'Describe this service',campusIds:[],details:{enabled:false,content:''}}); rebuildEditor(); });
 editor.addEventListener('input', () => { state.dirty = true; message.textContent='Unsaved local changes'; });
 editor.addEventListener('submit',(e)=>{e.preventDefault(); try { syncForm(state, editor); localStorage.setItem('openmasjid-draft',JSON.stringify(state.content)); state.dirty=false; message.textContent='Saved locally · validated, not published'; } catch (error) { message.textContent=`Save rejected: ${error.message}`; }});
 document.querySelector('#export-json').addEventListener('click', () => { try { syncForm(state, editor); exportDraft(state.content); } catch (error) { message.textContent = `Export rejected: ${error.message}`; } });
-document.querySelector('#import-json').addEventListener('change',(e)=>importJson(e.target.files[0],state,()=>{buildEditor(state,document.querySelector('#campus-editor'),document.querySelector('#content-editor'));applyOrganizationDraft();},message));
+document.querySelector('#import-json').addEventListener('change',(e)=>importJson(e.target.files[0],state,()=>{rebuildEditor();applyOrganizationDraft();},message));
 document.querySelector('#import-csv').addEventListener('change',(e)=>importCsv(e.target.files[0],state,message));
 document.querySelector('#logo-upload').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];

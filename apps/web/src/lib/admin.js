@@ -45,16 +45,19 @@ function audienceField(item, prefix, campuses) {
   return `<fieldset class="audience-field" data-audience="${prefix}"><legend>Campus audience</legend><p class="field-help" id="audience-help-${prefix}">Choose all campuses, or select one or more named campuses.</p><div class="audience-options"><label><input type="radio" name="audience-${prefix}" value="all" ${mode === 'all' ? 'checked' : ''}>All campuses</label><label><input type="radio" name="audience-${prefix}" value="selected" ${mode === 'selected' ? 'checked' : ''}>Specific campuses</label></div><div class="campus-choices" ${mode === 'all' ? 'hidden' : ''}>${campuses.map(campus => `<label><input type="checkbox" value="${esc(campus.id)}" ${item.campusIds.includes(campus.id) ? 'checked' : ''}>${esc(campus.name)}</label>`).join('')}</div></fieldset>`;
 }
 
-export function buildEditor(state, campusRoot, contentRoot) {
+export function buildEditor(state, campusRoot, contentRoot, programRoot = null, serviceRoot = null) {
   campusRoot.innerHTML = state.content.campuses.map((campus, index) => {
     const facilities = campus.facilities.join(', ');
     const jumuah = campus.jumuah.map((item) => `${item.label}|${item.time}`).join('\n');
     return `<article class="campus-card"><div class="card-head"><h3>${esc(campus.name || `Campus ${index + 1}`)}</h3><button type="button" class="remove-item" data-kind="campus" data-index="${index}">Delete campus</button></div><div class="mini-grid">${input('ID', `campuses.${index}.id`, campus.id)}${input('Name', `campuses.${index}.name`, campus.name)}${input('City', `campuses.${index}.city`, campus.city)}${input('Address', `campuses.${index}.address`, campus.address)}${input('Timezone (IANA)', `campuses.${index}.timezone`, campus.timezone)}${input('Latitude', `campuses.${index}.latitude`, campus.latitude, 'number')}${input('Longitude', `campuses.${index}.longitude`, campus.longitude, 'number')}${input('Phone', `campuses.${index}.phone`, campus.phone)}${input('Email', `campuses.${index}.email`, campus.email, 'email')}${textarea('Facilities (comma-separated)', `campuses.${index}.facilities`, facilities)}${select('Calculation method', `campuses.${index}.calculation.method`, campus.calculation.method, methods)}${select('Madhab', `campuses.${index}.calculation.madhab`, campus.calculation.madhab, ['Shafi', 'Hanafi'])}</div><fieldset><legend>Fixed iqamah schedule (HH:mm)</legend><div class="mini-grid">${keys.map((key) => input(key, `campuses.${index}.iqamah.${key}`, campus.iqamah[key], 'time')).join('')}</div></fieldset><fieldset><legend>Jumuah gatherings (one label|HH:mm per line)</legend>${textarea('Gatherings', `campuses.${index}.jumuah`, jumuah, 4)}</fieldset></article>`;
   }).join('');
   contentRoot.innerHTML = [...state.content.events.map((item, index) => contentCard('Event', item, index, 'event', state.content.campuses)), ...state.content.announcements.map((item, index) => contentCard('Announcement', item, index, 'announcement', state.content.campuses))].join('');
+  if (programRoot) programRoot.innerHTML = state.content.programs.map((item, index) => offeringCard('Program', item, index, 'programs', state.content.campuses)).join('');
+  if (serviceRoot) serviceRoot.innerHTML = state.content.services.map((item, index) => offeringCard('Service', item, index, 'services', state.content.campuses)).join('');
   campusRoot.querySelectorAll('[data-path]').forEach((element) => element.addEventListener('input', (event) => setPath(state.content, element.dataset.path, event.target.value)));
   contentRoot.querySelectorAll('[data-path]').forEach((element) => element.addEventListener('input', (event) => setPath(state.content, element.dataset.path, event.target.value)));
-  contentRoot.querySelectorAll('[data-audience]').forEach((field) => {
+  for (const root of [programRoot, serviceRoot].filter(Boolean)) root.querySelectorAll('[data-path]').forEach((element) => element.addEventListener('input', (event) => setPath(state.content, element.dataset.path, element.type === 'checkbox' ? element.checked : event.target.value)));
+  for (const root of [contentRoot, programRoot, serviceRoot].filter(Boolean)) root.querySelectorAll('[data-audience]').forEach((field) => {
     const [collection, index] = field.dataset.audience.split('.');
     const item = state.content[collection][index];
     field.addEventListener('change', () => {
@@ -65,10 +68,17 @@ export function buildEditor(state, campusRoot, contentRoot) {
     });
   });
   document.querySelectorAll('.remove-item').forEach((element) => element.addEventListener('click', () => {
-    const collection = element.dataset.kind === 'campus' ? state.content.campuses : element.dataset.kind === 'announcement' ? state.content.announcements : state.content.events;
+    const collections = { campus: state.content.campuses, announcement: state.content.announcements, event: state.content.events, program: state.content.programs, service: state.content.services };
+    const collection = collections[element.dataset.kind];
     collection.splice(Number(element.dataset.index), 1);
-    buildEditor(state, campusRoot, contentRoot);
+    buildEditor(state, campusRoot, contentRoot, programRoot, serviceRoot);
   }));
+}
+
+function offeringCard(kind, item, index, collection, campuses) {
+  const prefix = `${collection}.${index}`;
+  const enabled = item.details?.enabled === true;
+  return `<article class="content-card"><div class="card-head"><h3>${esc(kind)} · ${esc(item.title)}</h3><button type="button" class="remove-item" data-kind="${kind.toLowerCase()}" data-index="${index}">Delete ${kind.toLowerCase()}</button></div>${input('ID / page slug', `${prefix}.id`, item.id)}${input('Title', `${prefix}.title`, item.title)}${textarea('Card summary', `${prefix}.description`, item.description)}${audienceField(item, prefix, campuses)}<label class="details-toggle"><input type="checkbox" data-path="${prefix}.details.enabled" ${enabled ? 'checked' : ''}>Create a “More information” page</label>${textarea('Details page content', `${prefix}.details.content`, item.details?.content ?? '', 8)}</article>`;
 }
 
 function contentCard(kind, item, index, collection = 'event', campuses = []) {
@@ -98,14 +108,14 @@ function setPath(target, path, value) {
 }
 
 export function syncForm(state, form) {
-  form.querySelectorAll('[data-path]').forEach((element) => setPath(state.content, element.dataset.path, element.value));
+  form.querySelectorAll('[data-path]').forEach((element) => setPath(state.content, element.dataset.path, element.type === 'checkbox' ? element.checked : element.value));
   const formFields = form.querySelectorAll('[name]:not([name^="audience-"])');
   formFields.forEach((element) => setPath(state.content, element.name, element.value));
   if (state.content.donation.mode === 'none') { state.content.donation.externalUrl = null; state.content.donation.customHtml = ''; }
   else if (state.content.donation.mode === 'external') state.content.donation.customHtml = '';
   else if (state.content.donation.mode === 'custom') state.content.donation.externalUrl = null;
-  for (const collection of ['events', 'announcements']) {
-    for (const item of state.content[collection]) {
+  for (const collection of ['events', 'announcements', 'programs', 'services']) {
+    for (const item of state.content[collection] ?? []) {
       if (audienceModes.get(item) === 'selected' && !item.campusIds.length) {
         throw new Error(`Select at least one campus for “${item.title}”, or choose All campuses.`);
       }

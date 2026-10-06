@@ -7,7 +7,8 @@ import kotlinx.serialization.Serializable
     val schemaVersion: Int, val updatedAt: String, val organization: Organization,
     val campuses: List<Campus>, val events: List<Event>, val announcements: List<Announcement>,
     val donation: Donation = Donation(DonationMode.none, null, ""),
-    val programs: List<Program> = emptyList()
+    val programs: List<Program> = emptyList(),
+    val services: List<Service> = emptyList()
 )
 @Serializable data class Organization(val name: String, val tagline: String, val description: String, val email: String, val phone: String, val website: String, val logo: String, val theme: Theme)
 @Serializable data class Theme(val accent: String, val background: String)
@@ -25,7 +26,9 @@ import kotlinx.serialization.Serializable
 @Serializable data class Jumuah(val label: String, val time: String)
 @Serializable data class PrayerDay(val date: String, val fajr: String, val sunrise: String, val dhuhr: String, val asr: String, val maghrib: String, val isha: String, val iqamah: Iqamah? = null, val source: Source? = null)
 @Serializable enum class Source { calculated, uploaded }
-@Serializable data class Program(val id: String, val title: String, val description: String, val campusIds: List<String>)
+@Serializable data class OfferingDetails(val enabled: Boolean, val content: String)
+@Serializable data class Program(val id: String, val title: String, val description: String, val campusIds: List<String>, val details: OfferingDetails = OfferingDetails(false, ""))
+typealias Service = Program
 @Serializable data class Event(val id: String, val title: String, val description: String, val startsAt: String, val endsAt: String, val campusIds: List<String>, val location: String, val category: String)
 @Serializable data class Announcement(val id: String, val title: String, val body: String, val campusIds: List<String>, val publishedAt: String, val expiresAt: String?)
 

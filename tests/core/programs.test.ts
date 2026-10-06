@@ -24,12 +24,34 @@ it.each([
 });
 
 
+it('requires editable content when a details page is enabled', () => {
+  const programs = [{ ...program, details: { enabled: true, content: '   ' } }];
+  expect(() => validateSite({ ...demo(), programs })).toThrow();
+});
+
+it.each([
+  ['null services', { services: null }],
+  ['null details', { programs: [{ ...program, details: null }] }],
+  ['details missing enabled', { programs: [{ ...program, details: { content: '' } }] }],
+  ['details missing content', { programs: [{ ...program, details: { enabled: false } }] }],
+])('rejects %s instead of applying partial defaults', (_label, change) => {
+  expect(() => validateSite({ ...demo(), ...change })).toThrow();
+});
+
 it('accepts campus-scoped programs and defaults old schema-v1 documents', () => {
-  expect((validateSite(demo()) as any).programs).toEqual([]);
+  const legacy = validateSite(demo()) as any;
+  expect(legacy.programs).toEqual([]);
+  expect(legacy.services).toEqual([]);
+
   const programs = [
     { id: 'prayer', title: 'Prayer', description: 'Gather together', campusIds: [] },
-    { id: 'learning', title: 'Learning', description: 'Learn together', campusIds: ['garden'] },
-    { id: 'care', title: 'Care', description: 'Serve together', campusIds: ['garden', 'riverside'] },
+    { id: 'learning', title: 'Learning', description: 'Learn together', campusIds: ['garden'], details: { enabled: true, content: 'Weekly classes for every age.' } },
   ];
-  expect((validateSite({ ...demo(), programs }) as any).programs).toEqual(programs);
+  const services = [
+    { id: 'care', title: 'Care', description: 'Serve together', campusIds: ['garden', 'riverside'], details: { enabled: false, content: '' } },
+  ];
+  const parsed = validateSite({ ...demo(), programs, services }) as any;
+  expect(parsed.programs[0].details).toEqual({ enabled: false, content: '' });
+  expect(parsed.programs[1]).toEqual(programs[1]);
+  expect(parsed.services).toEqual(services);
 });

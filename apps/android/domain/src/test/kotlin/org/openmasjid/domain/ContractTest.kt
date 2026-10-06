@@ -23,10 +23,18 @@ class ContractTest {
     @Test fun programsDefaultAndValidation() {
         val site = decodeSite(fixture())
         assertTrue(site.programs.isEmpty())
+        assertTrue(site.services.isEmpty())
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replaceFirst("{", """{"programs":null,""")) }
+        assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replaceFirst("{", """{"services":null,""")) }
+        for (details in listOf("null", "{}", "{\"enabled\":false}", "{\"content\":\"\"}")) {
+            val raw = fixture().replaceFirst("{", """{"programs":[{"id":"prayer","title":"Prayer","description":"Fictional","campusIds":[],"details":$details}],""")
+            assertThrows(IllegalArgumentException::class.java) { decodeSite(raw) }
+        }
         assertThrows(IllegalArgumentException::class.java) { decodeSite(fixture().replaceFirst("{", """{"programs":[{"id":"prayer","title":"Prayer","description":"Fictional","campusIds":[],"unknown":true}],""")) }
         val program = Program("prayer", "Prayer", "Fictional", listOf(site.campuses.first().id))
         validateSite(site.copy(programs = listOf(program)))
+        validateSite(site.copy(services = listOf(program.copy(id = "care"))))
+        assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(services = listOf(program.copy(id = "care", details = OfferingDetails(true, " "))))) }
         for (programs in listOf(listOf(program, program), listOf(program.copy(campusIds = listOf("missing"))), listOf(program.copy(campusIds = program.campusIds + program.campusIds)))) {
             assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(programs = programs)) }
         }

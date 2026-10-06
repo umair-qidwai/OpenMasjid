@@ -12,27 +12,26 @@ const announcements = campusAnnouncements(site, campusId).slice(0, 3);
 const basePath = import.meta.env.BASE_URL;
 const logoUrl = resolveAssetUrl(site.organization.logo, basePath);
 const prayerKeys = ['fajr','sunrise','dhuhr','asr','maghrib','isha'] as const;
-const serviceCards = [
-  ['01', 'Prayer & reflection', 'Daily prayers, Jumuah gatherings, and quiet space to reconnect throughout the week.'],
-  ['02', 'Learning for life', 'Thoughtful learning for children, young people, families, and curious minds of every age.'],
-  ['03', 'Care & connection', 'Practical support, shared meals, and welcoming spaces that help neighbors become community.'],
+const offeringSections = [
+  { id: 'programs', title: 'Programs', description: 'Learn, grow, and build lasting connections through gatherings for every stage of life.', items: site.programs },
+  { id: 'services', title: 'Services', description: 'Practical, spiritual, and community support when you need it.', items: site.services },
 ];
 ---
 <Base title={`${site.organization.name} · ${campus.name}`} description={site.organization.tagline} icon={logoUrl}>
   <link rel="stylesheet" href={`${basePath}assets/fonts/fonts.css`} />
   <header class="container site-header" id="site-header">
-    <div class="brand-campus">
-      <a class="brand" href={basePath} aria-label={site.organization.name}><img src={logoUrl} data-site-logo alt="" /><span class="brand-name">{site.organization.name}</span></a>
-      <span class="campus-separator" aria-hidden="true">·</span>
-      <form id="campus-form" class="campus-switcher" hidden={site.campuses.length < 2}>
-        <label class="sr-only" for="campus">Current campus</label>
-        <select id="campus" name="campus" aria-label="Current campus">{site.campuses.map((item) => <option value={item.id} selected={item.id === campusId}>{item.name}</option>)}</select>
-      </form>
-      <span id="campus-static" class="campus-static" hidden={site.campuses.length > 1}>{campus.name}</span>
-    </div>
-    <nav class="nav" aria-label="Primary"><a href="#prayer" data-nav-target="prayer">Prayer</a><a href="#programs" data-nav-target="programs">Programs</a><a href="#community" data-nav-target="community">Community</a><a href="#visit" data-nav-target="visit">Visit</a></nav>
+    <a class="brand" href={basePath} aria-label={site.organization.name}><img src={logoUrl} data-site-logo alt="" /><span class="brand-name">{site.organization.name}</span></a>
+    <nav class="nav" aria-label="Primary"><a href="#prayer" data-nav-target="prayer">Prayer</a><a href="#programs" data-nav-target="programs">Programs</a><a href="#services" data-nav-target="services">Services</a><a href="#community" data-nav-target="community">Community</a><a href="#locations" data-nav-target="locations">Locations</a></nav>
     <a class="button header-action" href={`${basePath}donate/`}>Donate <span aria-hidden="true">↗</span></a>
   </header>
+
+  <dialog id="campus-dialog" aria-labelledby="campus-dialog-title" aria-describedby="campus-dialog-description">
+    <button type="button" class="dialog-close" id="campus-dialog-close" aria-label="Decide later">×</button>
+    <h2 id="campus-dialog-title">Choose your location</h2>
+    <p id="campus-dialog-description">We’ll personalize prayer times, events, and community updates. Your choice is remembered on this device.</p>
+    <div class="campus-dialog-options" id="campus-dialog-options" role="radiogroup" aria-label="Locations"></div>
+    <button type="button" class="button campus-dialog-continue" id="campus-dialog-continue" disabled>Choose a location</button>
+  </dialog>
 
   <main style={`--pattern:url("${basePath}assets/mosque-pattern.svg")`}>
     <section class="container hero" aria-labelledby="hero-title">
@@ -60,17 +59,16 @@ const serviceCards = [
       </div>
     </section>
 
-    <section class="container section programs" id="programs" aria-labelledby="programs-title">
-      <div class="section-head reveal"><div><h2 id="programs-title">Programs &amp; services</h2></div><p class="muted">Space to pray, learn, serve, and find your people—whatever season of life you are in.</p></div>
-      <div class="service-grid">{serviceCards.map(([number,title,description], index) => <article class="service-card reveal" style={`--delay:${index * 90}ms;--stack-index:${index}`}>
-        <span class="service-number" aria-hidden="true">{number}</span>
+    {offeringSections.map((section, sectionIndex) => <section class:list={['container','section','offering-section',`${section.id}-section`]} id={section.id} aria-labelledby={`${section.id}-title`}>
+      <div class="section-head reveal"><div><h2 id={`${section.id}-title`}>{section.title}</h2></div><p class="muted">{section.description}</p></div>
+      <div class="service-grid">{section.items.map((item, index) => <article class="service-card reveal" style={`--delay:${index * 90}ms`} data-campus-ids={item.campusIds.join(',')} hidden={item.campusIds.length > 0 && !item.campusIds.includes(campusId)}>
         <span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          {index === 0 ? <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></> : index === 1 ? <><path d="M12 6C9 3 5 3 2 4v15c4-1 7-1 10 2 3-3 6-3 10-2V4c-3-1-7-1-10 2Z"/><path d="M12 6v15"/></> : <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>}
+          {sectionIndex === 0 ? (index % 2 === 0 ? <><path d="M12 6C9 3 5 3 2 4v15c4-1 7-1 10 2 3-3 6-3 10-2V4c-3-1-7-1-10 2Z"/><path d="M12 6v15"/></> : <><circle cx="12" cy="8" r="3"/><path d="M5 21c.7-5 3-7 7-7s6.3 2 7 7"/></>) : (index % 2 === 0 ? <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></> : <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>)}
         </svg></span>
-        <h3>{title}</h3><p>{description}</p>
-        <a class="button service-action" href={index === 0 ? '#prayer' : '#visit'}>{index === 0 ? 'Prayer times' : 'Enquire with us'} <span aria-hidden="true">→</span></a>
+        <h3>{item.title}</h3><p>{item.description}</p>
+        {item.details.enabled && <a class="button service-action" href={`${basePath}${section.id}/${item.id}/`}>More information <span aria-hidden="true">→</span></a>}
       </article>)}</div>
-    </section>
+    </section>)}
 
     <section class="community-section" id="community">
       <div class="container">
@@ -84,23 +82,24 @@ const serviceCards = [
 
     <section class="give-section"><div class="container give-card reveal"><div><h2>Your generosity makes room for everyone.</h2></div><div><p>Support prayer, learning, care, and connection across our community.</p><a class="button gold" href={`${basePath}donate/`}>Make a donation <span aria-hidden="true">↗</span></a></div></div></section>
 
-    <section class="container section visit" id="visit" aria-labelledby="visit-title">
-      <div class="visit-copy reveal"><h2 id="visit-title">Visit us</h2><p>Find a campus, get directions, or contact its team directly.</p></div>
+    <section class="container section visit" id="locations" aria-labelledby="locations-title">
+      <div class="visit-copy reveal"><h2 id="locations-title">Locations</h2><p>Choose your location, get directions, or contact its team directly.</p></div>
       <div class="campus-locations" id="campus-locations">{site.campuses.map((item) => <article class="location-card reveal" data-campus-id={item.id} data-selected={item.id === campusId ? 'true' : 'false'}>
-        <span class="campus-selection">{item.id === campusId ? 'Selected campus' : 'Campus'}</span><h3>{item.name}</h3><p>{item.address}<br />{item.city}</p>
+        <span class="campus-selection">{item.id === campusId ? 'Current location' : 'Location'}</span><h3>{item.name}</h3><p>{item.address}<br />{item.city}</p>
         <div class="contact-actions"><a href={`mailto:${item.email}`}>Email <span class="sr-only">{item.name}</span></a><a href={`tel:${item.phone}`}>Call <span class="sr-only">{item.name}</span></a><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${item.address}, ${item.city}`)}`} target="_blank" rel="noopener noreferrer">Directions <span class="sr-only">to {item.name} (opens a new tab)</span> ↗</a></div>
         <div class="facility-list">{item.facilities.map((facility) => <span>{facility}</span>)}</div>
+        {item.id !== campusId && <button type="button" class="button secondary location-select" data-select-campus={item.id}>Use {item.name}</button>}
       </article>)}</div>
     </section>
   </main>
 
-  <footer class="footer"><div class="container site-footer"><div><div class="footer-brand"><span class="footer-logo"><img src={logoUrl} data-site-logo alt="" /></span><span>{site.organization.name}</span></div><p>A welcoming digital doorway for prayer, service, and belonging.</p></div><div class="footer-links"><a href="#prayer">Prayer times</a><a href="#programs">Programs</a><a href="#community">Community</a><a href="#visit">Visit</a></div><div class="footer-meta"><a href={`mailto:${site.organization.email}`}>{site.organization.email}</a><span>© {new Date().getFullYear()} {site.organization.name}</span></div></div></footer>
+  <footer class="footer"><div class="container site-footer"><div><div class="footer-brand"><span class="footer-logo"><img src={logoUrl} data-site-logo alt="" /></span><span>{site.organization.name}</span></div><p>A welcoming digital doorway for prayer, service, and belonging.</p></div><div class="footer-links"><a href="#prayer">Prayer times</a><a href="#programs">Programs</a><a href="#services">Services</a><a href="#community">Community</a><a href="#locations">Locations</a></div><div class="footer-meta"><a href={`mailto:${site.organization.email}`}>{site.organization.email}</a><span>© {new Date().getFullYear()} {site.organization.name}</span></div></div></footer>
 </Base>
 
 <style is:global>
 .hero{min-height:760px;padding:clamp(5rem,10vw,9rem) 0 7rem;display:grid;grid-template-columns:1.06fr .94fr;align-items:center;gap:clamp(2rem,6vw,6rem)}.hero-copy{position:relative;z-index:1}.hero h1{margin:.6rem 0 1.8rem;color:var(--green);max-width:760px}.type-line{display:inline-block;color:var(--gold);min-width:5.8em}.type-line.typing:after{content:"";display:inline-block;width:3px;height:.75em;margin-left:.08em;background:currentColor;animation:blink .8s steps(1) infinite}.hero-copy>p{max-width:540px;font-size:1.08rem;color:var(--muted)}.hero-actions{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;margin-top:2rem}.text-link{min-height:44px;display:inline-flex;align-items:center;gap:.5rem;color:var(--green);font-weight:800;text-decoration:none;border-bottom:1px solid var(--gold)}.hero-art{position:relative;min-height:570px}.arch-window{position:absolute;inset:0 0 0 14%;display:grid;place-items:center;border-radius:260px 260px 22px 22px;background:var(--green);overflow:hidden;box-shadow:var(--shadow)}.arch-window:before,.arch-window:after{content:"";position:absolute;border:1px solid rgba(224,193,128,.34);border-radius:50%}.arch-window:before{width:430px;height:430px}.arch-window:after{width:300px;height:300px}.arch-window img{position:relative;z-index:1;width:38%;opacity:.92}.sun{position:absolute;z-index:-1;width:190px;height:190px;right:-12%;top:2%;border-radius:50%;background:var(--gold)}.hero-note{position:absolute;z-index:2;left:0;bottom:8%;display:grid;padding:1.1rem 1.4rem;border:1px solid var(--line);background:var(--paper);box-shadow:var(--shadow)}.hero-note span{font-family:Georgia,serif;font-size:1.8rem;color:var(--green)}.hero-note small{color:var(--muted)}
 .prayer-wrap{padding:clamp(4.5rem,8vw,7rem) 0;background:var(--green);color:white}.section-head.light h2{color:white}.section-head.light .eyebrow{color:#e3bd77}.section-head form{display:grid;gap:.3rem;min-width:min(100%,300px)}.section-head label{font-size:.7rem;text-transform:uppercase;letter-spacing:.14em;color:#c7d6d0;font-weight:800}.section-head select{min-height:48px;padding:.6rem 2.5rem .6rem .8rem;border:1px solid rgba(255,255,255,.24);background:#21493f;color:white;border-radius:5px}.prayer-panel{display:grid;grid-template-columns:1.05fr 1.95fr;border-top:1px solid rgba(255,255,255,.2);border-bottom:1px solid rgba(255,255,255,.2)}.prayer-lead{padding:2rem 2rem 2rem 0;border-right:1px solid rgba(255,255,255,.2)}.prayer-meta{display:flex;justify-content:space-between;gap:1rem;color:#bdd0c9;font-size:.82rem}.prayer-lead>p{margin:3.2rem 0 .1rem;color:#bdd0c9}.next-name{font-size:clamp(2.2rem,5vw,4rem);font-family:"Trebuchet MS",sans-serif}.next-row{display:flex;align-items:end;justify-content:space-between;gap:1rem;margin-top:1.2rem}.next-row b{font-size:2rem;color:#e3bd77}.next-row span{font-size:.8rem;color:#bdd0c9}.schedule{display:grid;grid-template-columns:repeat(3,1fr)}.schedule>div{display:grid;align-content:center;gap:.4rem;padding:1.35rem;border-right:1px solid rgba(255,255,255,.13);border-bottom:1px solid rgba(255,255,255,.13)}.schedule small{text-transform:capitalize;color:#bdd0c9}.schedule b{font-size:1.45rem;color:#e3bd77}.schedule span{font-size:.72rem;color:#9eb5ad}.jumuah{grid-column:1/-1;display:flex;gap:1.5rem;align-items:center;padding:1.2rem 0;color:#dfe9e5}.jumuah strong{color:#e3bd77}.prayer-disclaimer{margin:1rem 0 0;color:#9eb5ad;font-size:.78rem}
-.programs .section-head p{font-size:1.05rem}.service-grid{border-top:1px solid var(--line)}.service-card{display:grid;grid-template-columns:70px 1fr auto;gap:1.5rem;align-items:center;padding:2rem 0;border-bottom:1px solid var(--line)}.service-card>span{color:var(--gold);font-size:.78rem}.service-card h3{margin-bottom:.45rem;color:var(--green);font-size:clamp(1.45rem,3vw,2.1rem)}.service-card p{margin:0;max-width:650px;color:var(--muted)}.service-card i{display:grid;place-items:center;width:48px;height:48px;border:1px solid var(--line);border-radius:50%;color:var(--green);font-style:normal}
+.offering-section .section-head p{font-size:1.05rem}.service-grid{border-top:1px solid var(--line)}.service-card{display:grid;grid-template-columns:70px 1fr auto;gap:1.5rem;align-items:center;padding:2rem 0;border-bottom:1px solid var(--line)}.service-card>span{color:var(--gold);font-size:.78rem}.service-card h3{margin-bottom:.45rem;color:var(--green);font-size:clamp(1.45rem,3vw,2.1rem)}.service-card p{margin:0;max-width:650px;color:var(--muted)}.service-card i{display:grid;place-items:center;width:48px;height:48px;border:1px solid var(--line);border-radius:50%;color:var(--green);font-style:normal}
 .community-section{padding:clamp(4.5rem,9vw,8rem) 0;background:var(--cream)}.community-filters{display:flex;gap:.4rem;flex-wrap:wrap}.filter{min-height:42px;padding:.5rem .9rem;border:1px solid #cfc1aa;border-radius:99px;background:transparent;color:var(--green);font-weight:750}.filter.active{background:var(--green);color:white;border-color:var(--green)}.community-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(2.5rem,7vw,7rem)}.column-title{padding-bottom:1rem;border-bottom:1px solid #cfc1aa}.column-title>span,.card-label{text-transform:uppercase;letter-spacing:.13em;font-size:.68rem;font-weight:850;color:var(--gold)}.column-title h2{font-size:clamp(2rem,4vw,3rem);margin:.25rem 0}.event-card{display:grid;grid-template-columns:80px 1fr;gap:1.2rem;padding:1.6rem 0;border-bottom:1px solid #cfc1aa}.event-card time{display:grid;align-content:start;text-align:center;border-right:1px solid #cfc1aa;color:var(--green)}.event-card time b{font-size:2rem}.event-card time span{text-transform:uppercase;font-size:.7rem}.event-card h3,.news-card h3{margin:.35rem 0 .55rem;color:var(--green)}.event-card p,.news-card p{margin-bottom:.7rem;color:var(--muted)}.event-card small{color:var(--green)}.news-card{padding:1.6rem 0;border-bottom:1px solid #cfc1aa}.news-card:first-child{padding-top:2rem}
 .give-section{padding:0 0 clamp(4.5rem,9vw,8rem);background:var(--cream)}.give-card{display:grid;grid-template-columns:1.3fr .7fr;gap:4rem;padding:clamp(2.2rem,6vw,5rem);background:#382820;color:white}.give-card h2{margin:.4rem 0 0;color:#fff}.give-card>div:last-child{align-self:end}.give-card p{color:#d8cbc2}.button.gold{background:var(--gold);border-color:var(--gold);color:#21170f}.visit{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(3rem,8vw,8rem);align-items:center}.visit-copy h2{color:var(--green);margin:.5rem 0 1rem}.visit-copy p{color:var(--muted);max-width:360px}.location-card{display:grid;grid-template-columns:70px 1fr;gap:1.5rem;padding:clamp(1.5rem,4vw,3rem);border:1px solid var(--line);background:var(--paper);box-shadow:var(--shadow)}.location-number{color:var(--gold)}.location-card h3{margin:.5rem 0;font-size:clamp(1.5rem,3vw,2.4rem);color:var(--green)}.location-card p{color:var(--muted);white-space:pre-line}.location-card a{color:var(--green);font-weight:800}.facility-list{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.5rem}.facility-list span{padding:.35rem .7rem;border:1px solid var(--line);border-radius:99px;font-size:.72rem;color:var(--muted)}.footer{background:#211914;color:white}.footer .site-footer{grid-template-columns:1fr auto auto;border:0;padding:3.5rem 0}.footer-brand{color:white}.footer-logo{display:grid;place-items:center;width:42px;height:42px;padding:4px;border-radius:50%;background:var(--ivory)}.footer-brand img{width:100%;height:100%;object-fit:contain}.site-footer p{margin:.8rem 0 0;color:#a99d96;max-width:330px;font-size:.82rem}.footer-links,.footer-meta{display:grid;align-content:start;gap:.55rem}.footer-links a,.footer-meta a{text-decoration:none}.footer-meta span{color:#a99d96}
 @keyframes blink{50%{opacity:0}}@media(max-width:900px){.hero{min-height:auto;grid-template-columns:1fr;padding-top:5rem}.hero-art{min-height:480px}.hero-copy{max-width:700px}.prayer-panel{grid-template-columns:1fr}.prayer-lead{padding:2rem 0;border-right:0;border-bottom:1px solid rgba(255,255,255,.2)}.community-grid,.give-card,.visit{grid-template-columns:1fr}.give-card{gap:2rem}.footer .site-footer{grid-template-columns:1fr 1fr}.footer-meta{grid-column:1/-1}}
@@ -126,8 +125,8 @@ main h2{font-size:clamp(2rem,4vw,3.1rem);line-height:1.2}
 .prayer-lead{padding:2rem}.prayer-meta{justify-content:center;flex-wrap:wrap}.prayer-lead>p{margin:1.6rem 0 .5rem}
 .next-row{justify-content:center;align-items:center;flex-wrap:wrap}.next-name{font-size:2.9rem}
 .schedule>div{padding:1.6rem .7rem}.jumuah{justify-content:center;align-items:center;padding:1.3rem}
-.programs{position:relative;padding-top:6rem;padding-bottom:6rem}
-.service-grid{border:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.6rem}
+.offering-section{position:relative;padding-top:6rem;padding-bottom:6rem}.services-section{padding-top:0}
+.service-grid{border:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:1.6rem}
 .service-card{display:flex;flex-direction:column;align-items:center;gap:0;text-align:center;padding:2.5rem 1.8rem 1.8rem;border:1px solid #e8e4d7;border-radius:24px;background:#fffefa;box-shadow:0 8px 24px #163e2d07;transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease}
 .service-card>.service-icon{display:grid;place-items:center;width:76px;height:76px;border-radius:20px;color:#fff;background:#1d6049;margin-bottom:1.5rem;box-shadow:0 6px 14px #164b3f18}
 .service-icon svg{width:36px;height:36px}.service-card h3{font-size:1.6rem;margin:0 0 1rem;line-height:1.3}
@@ -147,7 +146,7 @@ main h2{font-size:clamp(2rem,4vw,3.1rem);line-height:1.2}
 .footer-brand,.footer-links,.footer-meta{justify-content:center}.footer-links{display:flex;flex-wrap:wrap;gap:1.5rem}.site-footer p{max-width:none}.footer-meta{justify-items:center}
 @media(hover:hover){.service-card:hover,.event-card:hover,.news-card:hover{transform:translateY(-6px);box-shadow:0 18px 36px #163e2d14;border-color:#b4c5ae}}
 .service-card:focus-within{box-shadow:0 0 0 3px #b4c5ae}
-@media(min-width:901px){.programs{display:grid;grid-template-columns:minmax(240px,.7fr) minmax(0,1.3fr);gap:clamp(3rem,7vw,7rem);align-items:start;padding-top:8rem;padding-bottom:10rem}.programs .section-head{position:sticky;top:150px;align-items:center;text-align:center;margin:0}.programs .section-head h2{text-align:center;max-width:8ch;font-size:clamp(2.7rem,4.7vw,4.6rem)}.programs .section-head p{text-align:center;max-width:30ch}.programs .service-grid{display:block;min-width:0}.programs .service-card{position:sticky;top:calc(128px + var(--stack-index) * 22px);z-index:calc(2 + var(--stack-index));min-height:340px;margin:0 0 28vh;padding:3.2rem 3rem;justify-content:center;overflow:hidden;background:linear-gradient(145deg,#fffefa 0%,#f7f2e6 100%);border-color:#d8cfbd;box-shadow:0 26px 70px rgba(23,60,52,.14)}.programs .service-card:last-child{margin-bottom:0}.programs .service-card .service-number{position:absolute;right:1.5rem;bottom:-2rem;color:var(--green);font:500 9rem/1 Lora,serif;letter-spacing:-.08em;opacity:.055}.programs .service-card .service-action{width:auto;min-width:190px;padding-inline:1.5rem}}
+
 main .reveal{animation:none}
 main .reveal.is-pending{opacity:0;transform:translateY(22px);filter:blur(4px)}
 main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--delay,0ms)}
@@ -157,10 +156,11 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
 @media(max-width:900px){.service-grid{grid-template-columns:1fr;max-width:580px;margin:auto}.community-grid{grid-template-columns:1fr}.hero{padding:4rem 0}.jumuah{flex-wrap:wrap}.service-card p{max-width:40ch}}
 @media(max-width:600px){.hero h1{font-size:2.6rem}.hero-copy>.hero-tagline{font-size:1.2rem}.hero-copy>p{font-size:1.05rem}.hero-actions{gap:1rem}.service-card{padding:2rem 1.5rem}.prayer-lead{padding:1.5rem}.give-card{width:calc(100% - 2rem);padding:2.5rem 1.5rem}.section-head{margin-bottom:2rem}.jumuah{align-items:center}.community-filters{width:auto}}
 @media(prefers-reduced-motion:reduce){.type-line.typing:after{animation:none}.reveal.is-pending{opacity:1;transform:none;filter:none}.reveal.is-visible{animation:none}.site-header:after,.nav a,.nav a:after{transition:none}.hero-art{transform:none}.service-card,.event-card,.news-card{transition:none}.service-card:hover,.event-card:hover,.news-card:hover{transform:none}}
-@media(min-width:901px) and (prefers-reduced-motion:reduce){.programs{display:block}.programs .section-head,.programs .service-card{position:static}.programs .section-head{align-items:center;text-align:center;margin-bottom:3rem}.programs .section-head h2,.programs .section-head p{text-align:center;max-width:600px}.programs .service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.6rem}.programs .service-card{min-height:0;margin:0;padding:2.5rem 1.8rem 1.8rem}.programs .service-card .service-action{width:100%}}
-.brand-campus{display:flex;align-items:center;min-width:0;gap:.5rem}.brand-campus .brand{min-width:0}.brand-name{max-width:18ch}.campus-separator{color:var(--gold);font-size:1.2rem}.campus-switcher{position:relative;min-width:0}.campus-switcher:after{content:"";position:absolute;right:.6rem;top:50%;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-70%) rotate(45deg);pointer-events:none;color:var(--green)}.campus-switcher select{appearance:none;max-width:18ch;min-height:44px;padding:.35rem 1.65rem .35rem .65rem;border:1px solid #d9cfbe;border-radius:999px;background:#f3efe5;color:var(--green);font-size:.78rem;font-weight:750;text-overflow:ellipsis;cursor:pointer}.campus-switcher select:hover{border-color:#b9a986;background:#fffdf8}.campus-static{max-width:18ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--green-soft);font-size:.78rem;font-weight:750}.campus-locations{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:1.5rem;width:100%;max-width:1000px}.location-card{width:100%;min-width:0}.location-card[data-selected="true"]{border-color:#759888}.campus-selection{font-size:.9rem;color:var(--green)}.contact-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:.6rem 1.3rem}.contact-actions a{display:inline-flex;align-items:center;min-height:44px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-@media(max-width:700px){.brand-campus{gap:.35rem}.brand-name{max-width:9ch}.campus-separator{display:none}.campus-switcher select,.campus-static{max-width:11ch;padding-left:.5rem}.site-header{gap:.5rem}}
-@media(max-width:430px){.brand-campus .brand{gap:.4rem}.brand-name{display:none}.campus-switcher select,.campus-static{max-width:13ch}}
+
+.site-header>.brand{min-width:0}.brand-name{display:block;max-width:32ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.campus-locations{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:1.5rem;width:100%;max-width:1000px}.location-card{width:100%;min-width:0}.location-card[data-selected="true"]{border-color:#759888}.campus-selection{font-size:.9rem;color:var(--green)}.contact-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:.6rem 1.3rem}.contact-actions a{display:inline-flex;align-items:center;min-height:44px}.location-select{margin:1.25rem auto 0}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#campus-dialog{width:min(620px,calc(100% - 32px));max-height:min(760px,calc(100dvh - 32px));padding:clamp(1.5rem,5vw,2.7rem);border:1px solid var(--line);border-radius:28px;background:var(--paper);color:var(--ink);box-shadow:0 34px 100px rgba(9,29,25,.38);overflow:auto}#campus-dialog::backdrop{background:rgba(19,45,40,.68);backdrop-filter:blur(4px)}#campus-dialog h2{margin:0 2.5rem .8rem;color:var(--green);font:500 clamp(2rem,6vw,2.8rem)/1.1 Lora,Georgia,serif;text-align:center}#campus-dialog>p{max-width:500px;margin:0 auto 1.5rem;color:var(--muted);text-align:center}.dialog-close{position:absolute;top:1rem;right:1rem;width:44px;height:44px;border:0;border-radius:50%;background:var(--cream);color:var(--green);font-size:1.5rem}.campus-dialog-options{display:grid;gap:.75rem}.campus-choice{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:.9rem;min-height:72px;padding:.85rem 1rem;border:1px solid var(--line);border-radius:16px;background:#fff;cursor:pointer}.campus-choice:has(input:checked){border:2px solid var(--green);background:#f0f4ef}.campus-choice input{width:20px;height:20px;margin:0;accent-color:var(--green)}.campus-choice span{display:grid;text-align:left}.campus-choice b{color:var(--green)}.campus-choice small{color:var(--muted)}.campus-dialog-continue{width:100%;margin-top:1.25rem}.campus-dialog-continue:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:700px){.brand-name{max-width:24ch}.site-header{gap:.5rem}}
+@media(max-width:430px){.brand-name{display:none}#campus-dialog{padding:1.5rem 1rem;border-radius:22px}#campus-dialog h2{font-size:2rem}}
 </style>
 
 <script define:vars={{ basePath, initialSite: site }}>
@@ -204,8 +204,10 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
     if (revealObserver) { node.classList.add('is-pending'); revealObserver.observe(node); }
   });
   observeReveals();
-  const picker = document.querySelector('#campus');
   const filters = document.querySelectorAll('[data-filter]');
+  const campusDialog = document.querySelector('#campus-dialog');
+  const campusDialogOptions = document.querySelector('#campus-dialog-options');
+  const campusDialogContinue = document.querySelector('#campus-dialog-continue');
   const text = (selector, value) => { const element = document.querySelector(selector); if (element) element.textContent = value ?? ''; };
   const element = (tag, className, content) => { const node = document.createElement(tag); if (className) node.className = className; if (content !== undefined) node.textContent = content; return node; };
   const formatDate = (value, options) => new Date(value).toLocaleDateString(undefined, options);
@@ -230,27 +232,43 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
     const currentTime = new Intl.DateTimeFormat('en-US',{timeZone:campus.timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now);
     const row = campus.timetable.find((item) => item.date === date) || campus.timetable[0];
     const keys=['fajr','dhuhr','asr','maghrib','isha']; const nextKey=keys.find((key)=>row && row[key]>currentTime)||'fajr';
-    text('#today',date); text('#campus-name',campus.name); text('#visit-campus',campus.name); text('#next-name',nextKey[0].toUpperCase()+nextKey.slice(1)); text('#next-time',row?.[nextKey]||'—'); text('#next-iqamah',`Iqamah ${row?.iqamah?.[nextKey]||campus.iqamah[nextKey]}`);
+    text('#today',date); text('#campus-name',campus.name); text('#next-name',nextKey[0].toUpperCase()+nextKey.slice(1)); text('#next-time',row?.[nextKey]||'—'); text('#next-iqamah',`Iqamah ${row?.iqamah?.[nextKey]||campus.iqamah[nextKey]}`);
     ['fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach((key)=>{text(`[data-prayer="${key}"]`,row?.[key]||'—');if(key!=='sunrise')text(`[data-iqamah="${key}"]`,`Iqamah ${row?.iqamah?.[key]||campus.iqamah[key]}`)});
     const jumuah=document.querySelector('#jumuah'); if(jumuah){jumuah.replaceChildren(element('strong','','Jumuah'),...campus.jumuah.map((item)=>element('span','',`${item.label} · ${item.time}`)))}
     const locations=document.querySelector('#campus-locations');
     locations?.replaceChildren(...content.campuses.map((item)=>{
-      const card=element('article','location-card reveal');card.dataset.campusId=item.id;card.dataset.selected=String(item.id===campus.id);
-      card.append(element('span','campus-selection',item.id===campus.id?'Selected campus':'Campus'),element('h3','',item.name),element('p','',`${item.address}\n${item.city}`));
+      const selected=item.id===campus.id;
+      const card=element('article','location-card reveal');card.dataset.campusId=item.id;card.dataset.selected=String(selected);
+      card.append(element('span','campus-selection',selected?'Current location':'Location'),element('h3','',item.name),element('p','',`${item.address}\n${item.city}`));
       const actions=element('div','contact-actions');
       [['Email',`mailto:${item.email}`],['Call',`tel:${item.phone}`],['Directions',`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${item.address}, ${item.city}`)}`]].forEach(([label,href])=>{
         const link=element('a','',label);link.href=href;link.setAttribute('aria-label',`${label} ${item.name}${label==='Directions'?' (opens a new tab)':''}`);
         if(label==='Directions'){link.target='_blank';link.rel='noopener noreferrer';link.append(' ↗');}actions.append(link);
       });
-      const facilities=element('div','facility-list');facilities.append(...item.facilities.map((name)=>element('span','',name)));card.append(actions,facilities);return card;
+      const facilities=element('div','facility-list');facilities.append(...item.facilities.map((name)=>element('span','',name)));card.append(actions,facilities);
+      if(!selected&&content.campuses.length>1){const choose=element('button','button secondary location-select',`Use ${item.name}`);choose.type='button';choose.dataset.selectCampus=item.id;choose.addEventListener('click',()=>selectCampus(item.id,content));card.append(choose);}
+      return card;
     }));
-    document.querySelector('#campus-form').hidden=content.campuses.length<2;
-    const campusStatic=document.querySelector('#campus-static');if(campusStatic){campusStatic.hidden=content.campuses.length>1;campusStatic.textContent=campus.name;}
-    picker.replaceChildren(...content.campuses.map(item=>{const option=element('option','',item.name);option.value=item.id;return option;}));
-    picker.value=campus.id;renderCommunity(content,campus.id);
+    document.querySelectorAll('[data-campus-ids]').forEach((card)=>{const ids=(card.dataset.campusIds||'').split(',').filter(Boolean);card.hidden=ids.length>0&&!ids.includes(campus.id);});
+    renderCommunity(content,campus.id);observeReveals();
   };
-  const selectCampus=(campusId,content)=>{const selected=content.campuses.some((item)=>item.id===campusId)?campusId:content.campuses[0]?.id;if(!selected)return;localStorage.setItem('openmasjid-campus',selected);const url=new URL(location.href);url.searchParams.set('campus',selected);history.replaceState({},'',url);updateLogo(content.organization?.logo);renderCampus(content,selected)};
-  filters.forEach((button)=>button.addEventListener('click',()=>{filters.forEach((item)=>item.classList.toggle('active',item===button));applyFilter(button.dataset.filter)})); picker?.addEventListener('change',()=>selectCampus(picker.value,window.__openMasjidSite||initialSite));
-  const requested=new URLSearchParams(location.search).get('campus');const remembered=localStorage.getItem('openmasjid-campus');fetch(new URL(`${basePath}data/v1/site.json`,location.href),{cache:'no-store'}).then((response)=>{if(!response.ok)throw new Error(String(response.status));return response.json()}).then((content)=>{window.__openMasjidSite=content;selectCampus(requested||remembered||picker?.value,content)}).catch(()=>selectCampus(requested||picker?.value,initialSite));
+  const selectCampus=(campusId,content,persist=true)=>{const selected=content.campuses.some((item)=>item.id===campusId)?campusId:content.campuses[0]?.id;if(!selected)return;if(persist){localStorage.setItem('openmasjid-campus',selected);const url=new URL(location.href);url.searchParams.set('campus',selected);history.replaceState({},'',url)}updateLogo(content.organization?.logo);renderCampus(content,selected)};
+  const showCampusChooser=(content,selectedId)=>{
+    if(!campusDialog||!campusDialogOptions||!campusDialogContinue||content.campuses.length<2)return;
+    campusDialogOptions.replaceChildren(...content.campuses.map((item,index)=>{
+      const label=element('label','campus-choice');const input=element('input');input.type='radio';input.name='campus-choice';input.value=item.id;input.checked=item.id===selectedId||(!selectedId&&index===0);
+      const copy=element('span');copy.append(element('b','',item.name),element('small','',item.city));label.append(input,copy);
+      input.addEventListener('change',()=>{campusDialogContinue.disabled=false;campusDialogContinue.textContent=`Continue with ${item.name}`;});return label;
+    }));
+    const selected=content.campuses.find((item)=>item.id===selectedId)||content.campuses[0];campusDialogContinue.disabled=false;campusDialogContinue.textContent=`Continue with ${selected.name}`;
+    campusDialogContinue.onclick=()=>{const choice=campusDialogOptions.querySelector('input:checked');if(choice){selectCampus(choice.value,content);campusDialog.close();}};
+    if(!campusDialog.open)campusDialog.showModal();
+  };
+  document.querySelector('#campus-dialog-close')?.addEventListener('click',()=>campusDialog?.close());
+  filters.forEach((button)=>button.addEventListener('click',()=>{filters.forEach((item)=>item.classList.toggle('active',item===button));applyFilter(button.dataset.filter)}));
+  document.querySelectorAll('[data-select-campus]').forEach((button)=>button.addEventListener('click',()=>selectCampus(button.dataset.selectCampus,window.__openMasjidSite||initialSite)));
+  const requested=new URLSearchParams(location.search).get('campus');const remembered=localStorage.getItem('openmasjid-campus');
+  const initializeCampus=(content)=>{window.__openMasjidSite=content;const selected=requested||remembered||content.campuses[0]?.id;selectCampus(selected,content,Boolean(remembered));if(!remembered)showCampusChooser(content,selected)};
+  fetch(new URL(`${basePath}data/v1/site.json`,location.href),{cache:'no-store'}).then((response)=>{if(!response.ok)throw new Error(String(response.status));return response.json()}).then(initializeCampus).catch(()=>initializeCampus(initialSite));
   const typeLine=document.querySelector('.type-line'); if(typeLine&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const words=JSON.parse(typeLine.dataset.words);let word=0,char=words[0].length,deleting=true;typeLine.classList.add('typing');const tick=()=>{const target=words[word];if(deleting){char-=1;if(char===0){typeLine.textContent='';deleting=false;word=(word+1)%words.length;setTimeout(tick,350);return}}else{char+=1;if(char===target.length){deleting=true;typeLine.textContent=target;setTimeout(tick,1500);return}}typeLine.textContent=(deleting?target:words[word]).slice(0,char);setTimeout(tick,deleting?65:105)};setTimeout(tick,1400)}
 </script>

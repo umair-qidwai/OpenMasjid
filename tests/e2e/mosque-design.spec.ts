@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('openmasjid-campus', 'demo-central'));
+});
+
 test('typing clears the last letter before starting the next word', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.clock.install({ time: new Date('2026-10-03T12:00:00Z') });
@@ -18,11 +22,11 @@ test('typing clears the last letter before starting the next word', async ({ pag
   }
 });
 
-test('mosque service cards are centered, readable and responsive', async ({ page }) => {
+test('program and service cards are centered, readable and responsive', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   const cards = page.locator('.service-card');
-  await expect(cards).toHaveCount(3);
+  await expect(cards).toHaveCount(4);
   await cards.first().scrollIntoViewIfNeeded();
   const layout = await cards.evaluateAll(nodes => nodes.map(node => {
     const box = node.getBoundingClientRect();
@@ -35,15 +39,9 @@ test('mosque service cards are centered, readable and responsive', async ({ page
     expect(card.radius).toBeGreaterThanOrEqual(20);
     expect(card.font).toContain('Lora');
   }
-  if (page.viewportSize()!.width > 900) {
-    expect(layout[1].y).toBeGreaterThan(layout[0].y);
-    expect(layout[2].y).toBeGreaterThan(layout[1].y);
-  } else {
-    expect(layout[1].y).toBeGreaterThan(layout[0].y);
-  }
-  await expect(cards.locator('a')).toHaveCount(3);
+  await expect(cards.locator('a')).toHaveCount(2);
   for (const link of await cards.locator('a').all()) {
-    await expect(link).toHaveAttribute('href', /#(prayer|visit)/);
+    await expect(link).toHaveAttribute('href', /\/(programs|services)\/[a-z0-9-]+\/$/);
   }
   expect(await page.locator('.type-line').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeLessThanOrEqual(28);
   expect(await page.locator('main .eyebrow').count()).toBe(0);
@@ -55,7 +53,8 @@ test('mosque service cards are centered, readable and responsive', async ({ page
   if (await page.evaluate(() => matchMedia('(hover: hover)').matches)) {
     const event = page.locator('.event-card').first();
     await event.scrollIntoViewIfNeeded();
-    await expect(event).not.toHaveClass(/is-pending|is-visible/);
+    await expect(event).toHaveClass(/reveal/);
+    await event.evaluate(el => el.classList.remove('is-pending', 'is-visible'));
     await event.hover();
     await expect.poll(() => event.evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m42)).toBeLessThan(-5);
   }
@@ -71,7 +70,7 @@ test('reduced motion keeps content visible without typing or entrance animations
   expect(await card.evaluate(el => getComputedStyle(el).opacity)).toBe('1');
   expect(await card.evaluate(el => getComputedStyle(el).animationName)).toBe('none');
   if (page.viewportSize()!.width > 900) {
-    await expect(page.locator('.programs .section-head')).toHaveCSS('position', 'static');
+    await expect(page.locator('#programs .section-head')).toHaveCSS('position', 'static');
     await expect(card).toHaveCSS('position', 'static');
   }
   expect(await page.locator('.site-header').evaluate(el => getComputedStyle(el, '::after').transitionDuration)).toBe('0s');
@@ -91,20 +90,14 @@ test('scroll state updates progress and section navigation without hiding focus 
   await expect(page.locator('[data-nav-target="community"]')).toHaveAttribute('aria-current', 'location');
 });
 
-test('programs become a sticky scroll story on desktop and a normal stack on mobile', async ({ page }) => {
+test('programs and services are separate ordinary card sections', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  const heading = page.locator('.programs .section-head');
-  const cards = page.locator('.service-card');
-  if (page.viewportSize()!.width > 900) {
-    await expect(heading).toHaveCSS('position', 'sticky');
-    const styles = await cards.evaluateAll(nodes => nodes.map(node => ({ position: getComputedStyle(node).position, top: parseFloat(getComputedStyle(node).top), height: node.getBoundingClientRect().height })));
-    expect(styles.every(style => style.position === 'sticky' && style.height >= 300)).toBe(true);
-    expect(styles[1].top).toBeGreaterThan(styles[0].top);
-    expect(styles[2].top).toBeGreaterThan(styles[1].top);
-  } else {
-    await expect(heading).toHaveCSS('position', 'static');
-    await expect(cards.first()).toHaveCSS('position', 'static');
-  }
+  await expect(page.locator('#programs')).toContainText('Programs');
+  await expect(page.locator('#services')).toContainText('Services');
+  await expect(page.locator('#programs .service-card').first()).toHaveCSS('position', 'static');
+  await expect(page.locator('#services .service-card').first()).toHaveCSS('position', 'static');
+  await expect(page.locator('#programs .section-head')).toHaveCSS('position', 'static');
+  await expect(page.locator('#services .section-head')).toHaveCSS('position', 'static');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

@@ -63,5 +63,43 @@
     "campusIds": [],
     "publishedAt": "2026-10-01T00:00:00Z",
     "expiresAt": null
-  }]
+  }],
+  "programs": [
+    {
+      "id": "learning-for-life",
+      "title": "Learning for life",
+      "description": "Thoughtful learning for children, young people, families, and curious minds of every age.",
+      "campusIds": [],
+      "details": {
+        "enabled": true,
+        "content": "Our learning programs create welcoming spaces to study, ask questions, and grow together. Contact the mosque team for the current class schedule and registration information."
+      }
+    },
+    {
+      "id": "youth-and-family",
+      "title": "Youth & family",
+      "description": "Gatherings that help young people and families build faith, friendship, and confidence.",
+      "campusIds": [],
+      "details": { "enabled": false, "content": "" }
+    }
+  ],
+  "services": [
+    {
+      "id": "prayer-and-reflection",
+      "title": "Prayer & reflection",
+      "description": "Daily prayers, Jumuah gatherings, and quiet space to reconnect throughout the week.",
+      "campusIds": [],
+      "details": { "enabled": false, "content": "" }
+    },
+    {
+      "id": "care-and-connection",
+      "title": "Care & connection",
+      "description": "Practical support, shared meals, and welcoming spaces that help neighbors become community.",
+      "campusIds": [],
+      "details": {
+        "enabled": true,
+        "content": "Our community care team helps connect neighbors with practical support and trusted local resources. Reach out privately to the mosque team to ask for help or offer your time."
+      }
+    }
+  ]
 }

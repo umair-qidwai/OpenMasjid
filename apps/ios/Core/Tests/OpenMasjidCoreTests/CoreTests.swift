@@ -11,7 +11,9 @@ final class OpenMasjidCoreTests: XCTestCase {
         XCTAssertNoThrow(try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: root)))
     }
     func testProgramsDefaultAndValidation() throws {
-        XCTAssertEqual(try JSONDecoder().decode(Site.self, from: Data(json.utf8)).programs.count, 0)
+        let legacy = try JSONDecoder().decode(Site.self, from: Data(json.utf8))
+        XCTAssertEqual(legacy.programs.count, 0)
+        XCTAssertEqual(legacy.services.count, 0)
         let valid: [String: Any] = ["id": "prayer", "title": "Prayer", "description": "Fictional", "campusIds": ["north-campus"]]
         var unknown = valid; unknown["campusIds"] = ["missing"]
         var duplicate = valid; duplicate["campusIds"] = ["north-campus", "north-campus"]
@@ -21,6 +23,17 @@ final class OpenMasjidCoreTests: XCTestCase {
             var root = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
             root["programs"] = programs
             XCTAssertThrowsError(try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: root)))
+        }
+        var nullServices = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
+        nullServices["services"] = NSNull()
+        XCTAssertThrowsError(try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: nullServices)))
+        var invalidDetails = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
+        invalidDetails["services"] = [["id":"care", "title":"Care", "description":"Support", "campusIds":[], "details":["enabled":true, "content":" "]]]
+        XCTAssertThrowsError(try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: invalidDetails)))
+        for details: Any in [NSNull(), [:], ["enabled":false], ["content":""]] {
+            var partial = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
+            partial["programs"] = [["id":"prayer", "title":"Prayer", "description":"Fictional", "campusIds":[], "details":details]]
+            XCTAssertThrowsError(try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: partial)))
         }
     }
     func testDecodesStrictSchemaAndRejectsUnknownFields() throws { let site=try JSONDecoder().decode(Site.self,from:Data(json.utf8)); XCTAssertEqual(site.campuses.count,1); XCTAssertEqual(site.donation.mode, .none); var bad=json; bad=bad.replacingOccurrences(of:"\"schemaVersion\":1",with:"\"unexpected\":true,\"schemaVersion\":1"); XCTAssertThrowsError(try JSONDecoder().decode(Site.self,from:Data(bad.utf8))) }

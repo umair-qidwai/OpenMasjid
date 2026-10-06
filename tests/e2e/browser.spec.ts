@@ -13,6 +13,10 @@ async function assertNoHorizontalOverflow(page: import('@playwright/test').Page)
 }
 
 test.describe('public site browser UX', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('openmasjid-campus', 'demo-central'));
+  });
+
   test('loads the published fictional JSON and renders prayer/Jumuah content', async ({ page }) => {
     const jsonResponse = await page.request.get('/data/v1/site.json');
     await page.goto('/');
@@ -22,7 +26,7 @@ test.describe('public site browser UX', () => {
     await expect(page.getByText('Second gathering · 14:15')).toBeVisible();
     await expect(page.locator('.site-header').getByRole('link', { name: 'Donate' })).toHaveAttribute('href', /donate\/$/);
     await expect(page.getByRole('link', { name: /Admin|Publisher admin/i })).toHaveCount(0);
-    for (const heading of ['Prayer times', 'Programs & services', 'Upcoming events', 'Announcements', 'Visit us']) {
+    for (const heading of ['Prayer times', 'Programs', 'Services', 'Upcoming events', 'Announcements', 'Locations']) {
       await expect(page.getByRole('heading', { name: heading })).toBeVisible();
     }
     expect(jsonResponse.status()).toBe(200);
@@ -31,12 +35,11 @@ test.describe('public site browser UX', () => {
 
   test('changes campus and updates the displayed campus', async ({ page }) => {
     await page.goto('/');
-    await page.locator('#campus').selectOption('demo-riverside');
-    await expect(page.locator('#campus')).toHaveValue('demo-riverside');
+    await page.getByRole('button', { name: 'Use Riverside · Fictional Demo' }).click();
     await expect(page.locator('.prayer-panel')).toContainText('Riverside · Fictional Demo');
     await expect(page).toHaveURL(/campus=demo-riverside/);
     await page.reload();
-    await expect(page.locator('#campus')).toHaveValue('demo-riverside');
+    await expect(page.locator('.location-card[data-selected="true"]')).toContainText('Riverside · Fictional Demo');
     await expect(page.locator('.prayer-panel')).toContainText('Riverside · Fictional Demo');
     await screenshot(page, 'public-riverside');
   });
@@ -65,7 +68,7 @@ test.describe('public site browser UX', () => {
     });
     await page.route('**/data/v1/site.json', (route) => route.fulfill({ json: content }));
     await page.goto('/');
-    await page.locator('#campus').selectOption('demo-riverside');
+    await page.getByRole('button', { name: 'Use Riverside · Fictional Demo' }).click();
     await expect(page.locator('#community-cards [data-kind="event"]').filter({ hasText: 'Riverside fictional gathering' })).toBeVisible();
     await expect(page.locator('#community-cards').getByRole('heading', { name: 'Central fictional notice' })).toHaveCount(0);
   });
@@ -156,18 +159,40 @@ test.describe('admin editor browser UX', () => {
     expect(draft.donation).toEqual({ mode: 'external', externalUrl: 'https://give.example.org/openmasjid', customHtml: '' });
   });
 
+  test('creates card-only and details-enabled programs and services', async ({ page }) => {
+    await page.getByRole('button', { name: 'Programs & services' }).click();
+    await page.getByRole('button', { name: '+ Program' }).click();
+    await page.getByRole('button', { name: '+ Service' }).click();
+    const newProgram = page.locator('#program-editor .content-card').last();
+    const newService = page.locator('#service-editor .content-card').last();
+    await newProgram.locator('[data-path$=".title"]').fill('Youth circle');
+    await newProgram.locator('[data-path$=".details.enabled"]').check();
+    await newProgram.locator('[data-path$=".details.content"]').fill('A welcoming weekly youth circle.');
+    await newProgram.getByLabel('Specific campuses').check();
+    await newProgram.getByLabel('Riverside · Fictional Demo').check();
+    await newService.locator('[data-path$=".title"]').fill('Family support');
+    await page.locator('#service-editor .content-card').first().getByRole('button', { name: 'Delete service' }).click();
+    await page.getByRole('button', { name: 'Save local draft' }).click();
+    await expect(page.locator('#editor-message')).toContainText('Saved locally');
+    const draft = await page.evaluate(() => JSON.parse(localStorage.getItem('openmasjid-draft') || '{}'));
+    expect(draft.programs.at(-1).details).toEqual({ enabled: true, content: 'A welcoming weekly youth circle.' });
+    expect(draft.programs.at(-1).campusIds).toEqual(['demo-riverside']);
+    expect(draft.services.at(-1).details).toEqual({ enabled: false, content: '' });
+    expect(draft.services.some((service: { title: string }) => service.title === 'Prayer & reflection')).toBe(false);
+  });
+
   test('edits and removes a real event and announcement locally', async ({ page }) => {
     await page.getByRole('button', { name: 'Events & news' }).click();
     const eventTitle = page.locator('[data-path="events.0.title"]');
     await eventTitle.fill('Edited fictional event');
     await page.getByRole('button', { name: '+ Event' }).click();
-    await expect(page.locator('.content-card')).toHaveCount(3);
+    await expect(page.locator('#content-editor .content-card')).toHaveCount(3);
     await page.locator('[data-kind="event"]').last().click();
-    await expect(page.locator('.content-card')).toHaveCount(2);
+    await expect(page.locator('#content-editor .content-card')).toHaveCount(2);
     await page.getByRole('button', { name: '+ Announcement' }).click();
-    await expect(page.locator('.content-card')).toHaveCount(3);
+    await expect(page.locator('#content-editor .content-card')).toHaveCount(3);
     await page.locator('[data-kind="announcement"]').last().click();
-    await expect(page.locator('.content-card')).toHaveCount(2);
+    await expect(page.locator('#content-editor .content-card')).toHaveCount(2);
     await page.getByRole('button', { name: 'Save local draft' }).click();
     await expect(page.locator('#editor-message')).toContainText('Saved locally');
     await expect(page.locator('#save-status')).toContainText('Local draft');
@@ -225,5 +250,22 @@ test.describe('admin editor browser UX', () => {
     await assertNoHorizontalOverflow(page);
     expect(exceptions).toEqual([]);
     await screenshot(page, 'admin-home');
+  });
+});
+
+test.describe('program and service pages', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('openmasjid-campus', 'demo-central'));
+  });
+
+  test('keeps card-only offerings unlinked and opens enabled details pages', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Programs', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Services', exact: true })).toBeVisible();
+    await expect(page.locator('#programs .service-card').filter({ hasText: 'Youth & family' }).getByRole('link')).toHaveCount(0);
+    await page.locator('#programs .service-card').filter({ hasText: 'Learning for life' }).getByRole('link', { name: /More information/ }).click();
+    await expect(page).toHaveURL(/\/programs\/learning-for-life\/$/);
+    await expect(page.getByRole('heading', { name: 'Learning for life' })).toBeVisible();
+    await expect(page.getByText('Our learning programs create welcoming spaces')).toBeVisible();
   });
 });
