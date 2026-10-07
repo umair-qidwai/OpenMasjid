@@ -27,7 +27,7 @@ test.describe('public site browser UX', () => {
     await expect(page.locator('.site-header').getByRole('link', { name: 'Donate' })).toHaveAttribute('href', /donate\/$/);
     await expect(page.getByRole('link', { name: /Admin|Publisher admin/i })).toHaveCount(0);
     await expect(page.getByText('A welcoming digital doorway for prayer, service, and belonging.', { exact: true })).toHaveCount(0);
-    for (const heading of ['Prayer times', 'Programs', 'Services', 'Upcoming events', 'Announcements', 'Locations']) {
+    for (const heading of ['Prayer times', 'Programs', 'Services', 'Upcoming events', 'Announcements', 'Volunteer with us', 'Locations']) {
       await expect(page.getByRole('heading', { name: heading })).toBeVisible();
     }
     expect(jsonResponse.status()).toBe(200);
@@ -100,6 +100,16 @@ test.describe('public site browser UX', () => {
     for (const logo of await page.locator('[data-site-logo]').all()) await expect(logo).toHaveAttribute('src', content.organization.logo);
     await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', content.organization.logo);
   });
+
+  test('opens the volunteer opportunities page from the homepage call to action', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.locator('#volunteer').getByRole('link', { name: 'Explore opportunities' }).click();
+    await expect(page).toHaveURL(/\/volunteer\/$/);
+    await expect(page.getByRole('heading', { name: 'Find your place to help.' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Volunteer for Sunday school' })).toHaveAttribute('href', 'https://forms.example.org/sunday-school');
+    await expect(page.getByRole('link', { name: 'Help with community events' })).toHaveAttribute('href', 'https://forms.example.org/events');
+    await assertNoHorizontalOverflow(page);
+  });
 });
 
 test.describe('donation page', () => {
@@ -126,7 +136,7 @@ test.describe('donation page', () => {
 
 test.describe('admin editor browser UX', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/admin/');
+    await page.goto('/admin/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Shape your community\'s front door.' })).toBeVisible();
   });
 
@@ -158,6 +168,34 @@ test.describe('admin editor browser UX', () => {
     await expect(page.locator('#editor-message')).toContainText('Saved locally');
     const draft = await page.evaluate(() => JSON.parse(localStorage.getItem('openmasjid-draft') || '{}'));
     expect(draft.donation).toEqual({ mode: 'external', externalUrl: 'https://give.example.org/openmasjid', customHtml: '' });
+  });
+
+  test('configures either a direct volunteer form or a page of opportunities', async ({ page }) => {
+    await page.getByRole('button', { name: 'Volunteer' }).click();
+    await page.getByLabel('Show volunteer section').check();
+    await page.getByLabel('Volunteer destination').selectOption('external');
+    await page.getByLabel('Direct volunteer form URL').fill('https://forms.example.org/general');
+    await page.getByRole('button', { name: 'Save local draft' }).click();
+    let draft = await page.evaluate(() => JSON.parse(localStorage.getItem('openmasjid-draft') || '{}'));
+    expect(draft.volunteer.mode).toBe('external');
+    expect(draft.volunteer.externalUrl).toBe('https://forms.example.org/general');
+
+    await page.getByLabel('Volunteer destination').selectOption('page');
+    await page.getByRole('button', { name: '+ Opportunity' }).click();
+    const opportunity = page.locator('#volunteer-opportunity-editor .content-card').last();
+    await opportunity.locator('[data-path$=".id"]').fill('sunday-school');
+    await opportunity.locator('[data-path$=".title"]').fill('Sunday school');
+    await opportunity.locator('[data-path$=".description"]').fill('Help children learn and grow.');
+    await opportunity.locator('[data-path$=".buttonLabel"]').fill('Apply for Sunday school');
+    await opportunity.locator('[data-path$=".url"]').fill('https://forms.example.org/sunday-school');
+    await page.getByRole('button', { name: 'Save local draft' }).click();
+    draft = await page.evaluate(() => JSON.parse(localStorage.getItem('openmasjid-draft') || '{}'));
+    expect(draft.volunteer.mode).toBe('page');
+    expect(draft.volunteer.externalUrl).toBeNull();
+    expect(draft.volunteer.opportunities.at(-1)).toEqual({
+      id: 'sunday-school', title: 'Sunday school', description: 'Help children learn and grow.',
+      buttonLabel: 'Apply for Sunday school', url: 'https://forms.example.org/sunday-school',
+    });
   });
 
   test('creates card-only and details-enabled programs and services', async ({ page }) => {

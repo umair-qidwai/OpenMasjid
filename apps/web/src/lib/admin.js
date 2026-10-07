@@ -45,7 +45,7 @@ function audienceField(item, prefix, campuses) {
   return `<fieldset class="audience-field" data-audience="${prefix}"><legend>Campus audience</legend><p class="field-help" id="audience-help-${prefix}">Choose all campuses, or select one or more named campuses.</p><div class="audience-options"><label><input type="radio" name="audience-${prefix}" value="all" ${mode === 'all' ? 'checked' : ''}>All campuses</label><label><input type="radio" name="audience-${prefix}" value="selected" ${mode === 'selected' ? 'checked' : ''}>Specific campuses</label></div><div class="campus-choices" ${mode === 'all' ? 'hidden' : ''}>${campuses.map(campus => `<label><input type="checkbox" value="${esc(campus.id)}" ${item.campusIds.includes(campus.id) ? 'checked' : ''}>${esc(campus.name)}</label>`).join('')}</div></fieldset>`;
 }
 
-export function buildEditor(state, campusRoot, contentRoot, programRoot = null, serviceRoot = null) {
+export function buildEditor(state, campusRoot, contentRoot, programRoot = null, serviceRoot = null, volunteerRoot = null) {
   campusRoot.innerHTML = state.content.campuses.map((campus, index) => {
     const facilities = campus.facilities.join(', ');
     const jumuah = campus.jumuah.map((item) => `${item.label}|${item.time}`).join('\n');
@@ -54,9 +54,10 @@ export function buildEditor(state, campusRoot, contentRoot, programRoot = null, 
   contentRoot.innerHTML = [...state.content.events.map((item, index) => contentCard('Event', item, index, 'event', state.content.campuses)), ...state.content.announcements.map((item, index) => contentCard('Announcement', item, index, 'announcement', state.content.campuses))].join('');
   if (programRoot) programRoot.innerHTML = state.content.programs.map((item, index) => offeringCard('Program', item, index, 'programs', state.content.campuses)).join('');
   if (serviceRoot) serviceRoot.innerHTML = state.content.services.map((item, index) => offeringCard('Service', item, index, 'services', state.content.campuses)).join('');
+  if (volunteerRoot) volunteerRoot.innerHTML = state.content.volunteer.opportunities.map((item, index) => volunteerOpportunityCard(item, index)).join('');
   campusRoot.querySelectorAll('[data-path]').forEach((element) => element.addEventListener('input', (event) => setPath(state.content, element.dataset.path, event.target.value)));
   contentRoot.querySelectorAll('[data-path]').forEach((element) => element.addEventListener('input', (event) => setPath(state.content, element.dataset.path, event.target.value)));
-  for (const root of [programRoot, serviceRoot].filter(Boolean)) root.querySelectorAll('[data-path]').forEach((element) => element.addEventListener('input', (event) => setPath(state.content, element.dataset.path, element.type === 'checkbox' ? element.checked : event.target.value)));
+  for (const root of [programRoot, serviceRoot, volunteerRoot].filter(Boolean)) root.querySelectorAll('[data-path]').forEach((element) => element.addEventListener('input', (event) => setPath(state.content, element.dataset.path, element.type === 'checkbox' ? element.checked : event.target.value)));
   for (const root of [contentRoot, programRoot, serviceRoot].filter(Boolean)) root.querySelectorAll('[data-audience]').forEach((field) => {
     const [collection, index] = field.dataset.audience.split('.');
     const item = state.content[collection][index];
@@ -68,11 +69,16 @@ export function buildEditor(state, campusRoot, contentRoot, programRoot = null, 
     });
   });
   document.querySelectorAll('.remove-item').forEach((element) => element.addEventListener('click', () => {
-    const collections = { campus: state.content.campuses, announcement: state.content.announcements, event: state.content.events, program: state.content.programs, service: state.content.services };
+    const collections = { campus: state.content.campuses, announcement: state.content.announcements, event: state.content.events, program: state.content.programs, service: state.content.services, opportunity: state.content.volunteer.opportunities };
     const collection = collections[element.dataset.kind];
     collection.splice(Number(element.dataset.index), 1);
-    buildEditor(state, campusRoot, contentRoot, programRoot, serviceRoot);
+    buildEditor(state, campusRoot, contentRoot, programRoot, serviceRoot, volunteerRoot);
   }));
+}
+
+function volunteerOpportunityCard(item, index) {
+  const prefix = `volunteer.opportunities.${index}`;
+  return `<article class="content-card"><div class="card-head"><h3>${esc(item.title || `Opportunity ${index + 1}`)}</h3><button type="button" class="remove-item" data-kind="opportunity" data-index="${index}">Delete opportunity</button></div>${input('ID', `${prefix}.id`, item.id)}${input('Title', `${prefix}.title`, item.title)}${textarea('Short description', `${prefix}.description`, item.description)}${input('Button label', `${prefix}.buttonLabel`, item.buttonLabel)}${input('Application URL', `${prefix}.url`, item.url, 'url')}</article>`;
 }
 
 function offeringCard(kind, item, index, collection, campuses) {

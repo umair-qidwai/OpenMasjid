@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
     val schemaVersion: Int, val updatedAt: String, val organization: Organization,
     val campuses: List<Campus>, val events: List<Event>, val announcements: List<Announcement>,
     val donation: Donation = Donation(DonationMode.none, null, ""),
+    val volunteer: Volunteer = Volunteer(),
     val programs: List<Program> = emptyList(),
     val services: List<Service> = emptyList()
 )
@@ -14,6 +15,17 @@ import kotlinx.serialization.Serializable
 @Serializable data class Theme(val accent: String, val background: String)
 @Serializable enum class DonationMode { none, external, custom }
 @Serializable data class Donation(val mode: DonationMode, val externalUrl: String?, val customHtml: String)
+@Serializable enum class VolunteerMode { external, page }
+@Serializable data class VolunteerOpportunity(val id: String, val title: String, val description: String, val buttonLabel: String, val url: String)
+@Serializable data class Volunteer(
+    val enabled: Boolean = false,
+    val title: String = "Volunteer with us",
+    val description: String = "Share your time and talents with the community.",
+    val mode: VolunteerMode = VolunteerMode.external,
+    val buttonLabel: String = "Become a volunteer",
+    val externalUrl: String? = null,
+    val opportunities: List<VolunteerOpportunity> = emptyList()
+)
 @Serializable data class Campus(
     val id: String, val name: String, val address: String, val city: String, val timezone: String,
     val latitude: Double, val longitude: Double, val phone: String, val email: String, val facilities: List<String>,

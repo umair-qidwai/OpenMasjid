@@ -38,7 +38,19 @@ export const DonationSchema = z.object({
  if (donation.mode === 'external' && (donation.externalUrl === null || donation.customHtml !== '')) issue('externalUrl','External donation mode requires only an HTTPS URL');
  if (donation.mode === 'custom' && (donation.externalUrl !== null || donation.customHtml.trim().length === 0)) issue('customHtml','Custom donation mode requires only non-empty HTML');
 }).default({mode:'none',externalUrl:null,customHtml:''});
-export const SiteSchema = z.object({schemaVersion:z.literal(1),updatedAt:timestamp,organization:z.object({name:text(200),tagline:text(300),description:z.string().max(20000),email,phone,website:https,logo,tabLogo:logo.optional(),tabLogoDark:logo.optional(),sameLogoEverywhere:z.boolean().default(true),theme:z.object({accent:z.string().regex(/^#[\da-fA-F]{6}$/),background:z.string().regex(/^#[\da-fA-F]{6}$/)}).strict()}).strict(),donation:DonationSchema,campuses:z.array(CampusSchema).min(1).max(20),events:z.array(EventSchema).max(500),announcements:z.array(AnnouncementSchema).max(500),programs:z.array(ProgramSchema).max(500).default([]),services:z.array(ServiceSchema).max(500).default([])}).strict().superRefine((s,ctx) => {
+export const VolunteerOpportunitySchema = z.object({id,title:text(200),description:text(10000),buttonLabel:text(80),url:https}).strict();
+export const VolunteerSchema = z.object({
+ enabled:z.boolean(),title:text(200),description:text(10000),mode:z.enum(['external','page']),buttonLabel:text(80),externalUrl:https.nullable(),opportunities:z.array(VolunteerOpportunitySchema).max(50)
+}).strict().superRefine((volunteer,ctx) => {
+ const issue = (path:string, message:string) => ctx.addIssue({code:z.ZodIssueCode.custom,path:[path],message});
+ const ids = volunteer.opportunities.map(item => item.id);
+ if (new Set(ids).size !== ids.length) issue('opportunities','Duplicate volunteer opportunity ID');
+ if (volunteer.mode === 'external' && volunteer.opportunities.length > 0) issue('opportunities','Direct-link mode cannot include opportunities');
+ if (volunteer.mode === 'page' && volunteer.externalUrl !== null) issue('externalUrl','Opportunities-page mode cannot include a direct URL');
+ if (volunteer.enabled && volunteer.mode === 'external' && volunteer.externalUrl === null) issue('externalUrl','Enabled direct-link mode requires an HTTPS URL');
+ if (volunteer.enabled && volunteer.mode === 'page' && volunteer.opportunities.length === 0) issue('opportunities','Enabled opportunities-page mode requires at least one opportunity');
+}).default({enabled:false,title:'Volunteer with us',description:'Share your time and talents with the community.',mode:'external',buttonLabel:'Become a volunteer',externalUrl:null,opportunities:[]});
+export const SiteSchema = z.object({schemaVersion:z.literal(1),updatedAt:timestamp,organization:z.object({name:text(200),tagline:text(300),description:z.string().max(20000),email,phone,website:https,logo,tabLogo:logo.optional(),tabLogoDark:logo.optional(),sameLogoEverywhere:z.boolean().default(true),theme:z.object({accent:z.string().regex(/^#[\da-fA-F]{6}$/),background:z.string().regex(/^#[\da-fA-F]{6}$/)}).strict()}).strict(),donation:DonationSchema,volunteer:VolunteerSchema,campuses:z.array(CampusSchema).min(1).max(20),events:z.array(EventSchema).max(500),announcements:z.array(AnnouncementSchema).max(500),programs:z.array(ProgramSchema).max(500).default([]),services:z.array(ServiceSchema).max(500).default([])}).strict().superRefine((s,ctx) => {
  const issue = (path:(string|number)[], message:string) => ctx.addIssue({code:z.ZodIssueCode.custom,path,message});
  for (const collection of ['campuses','events','announcements','programs','services'] as const) { const seen = new Set<string>(); s[collection].forEach((v,i) => { if(seen.has(v.id)) issue([collection,i,'id'],'Duplicate ID'); seen.add(v.id); }); }
  const ids = new Set(s.campuses.map(c => c.id));

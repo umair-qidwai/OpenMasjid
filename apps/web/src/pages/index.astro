@@ -1,12 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
 import site from '../lib/site.json';
-import { getNextPrayer, localDate, localTime, resolveCampusId, campusEvents, campusAnnouncements, resolveAssetUrl, resolveTabLogo } from '../lib/site';
+import { formatPrayerCountdown, getPrayerTiming, localDate, resolveCampusId, campusEvents, campusAnnouncements, resolveAssetUrl, resolveTabLogo } from '../lib/site';
 const campusId = resolveCampusId(site);
 const campus = site.campuses.find((item) => item.id === campusId)!;
 const today = localDate(campus.timezone);
-const row = campus.timetable.find((item) => item.date === today) ?? campus.timetable[0];
-const next = row ? getNextPrayer(row, localTime(campus.timezone)) : null;
+const row = campus.timetable.find((item) => item.date === today);
+const timing = getPrayerTiming(campus.timetable, campus.timezone);
 const events = campusEvents(site, campusId).slice(0, 3);
 const announcements = campusAnnouncements(site, campusId).slice(0, 3);
 const basePath = import.meta.env.BASE_URL;
@@ -14,7 +14,9 @@ const logoUrl = resolveAssetUrl(site.organization.logo, basePath);
 const tabLogoUrl = resolveTabLogo(site, basePath);
 const tabLogoDarkUrl = resolveTabLogo(site, basePath, true);
 const locationLabel = site.campuses.length === 1 ? 'Location' : 'Locations';
+const volunteerHref = site.volunteer.mode === 'external' ? site.volunteer.externalUrl : `${basePath}volunteer/`;
 const prayerKeys = ['fajr','sunrise','dhuhr','asr','maghrib','isha'] as const;
+const prayerNames = { fajr: 'Fajr', sunrise: 'Shuruq', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' } as const;
 const offeringSections = [
   { id: 'programs', title: 'Programs', description: 'Learn, grow, and build lasting connections through gatherings for every stage of life.', items: site.programs },
   { id: 'services', title: 'Services', description: 'Practical, spiritual, and community support when you need it.', items: site.services },
@@ -50,12 +52,12 @@ const offeringSections = [
       </div>
     </section>
 
-    <section class="prayer-wrap" id="prayer" aria-labelledby="prayer-title">
+    <section class="prayer-wrap" id="prayer" aria-labelledby="prayer-title" style={`--prayer-accent:${site.organization.theme.accent};--prayer-background:${site.organization.theme.background}`}>
       <div class="container">
         <div class="section-head light reveal"><div><h2 id="prayer-title">Prayer times</h2></div></div>
         <div class="prayer-panel reveal" id="prayer-panel">
-          <div class="prayer-lead"><div class="prayer-meta"><span id="campus-name">{campus.name}</span><span id="today">{today}</span></div><p>Next prayer</p><strong class="next-name" id="next-name">{next ? next.key[0].toUpperCase() + next.key.slice(1) : 'Schedule'}</strong><div class="next-row"><b id="next-time">{next?.time ?? 'Not available'}</b><span id="next-iqamah">{next ? `Iqamah ${row?.iqamah?.[next.key] ?? campus.iqamah[next.key]}` : ''}</span></div></div>
-          <div class="schedule" id="schedule">{prayerKeys.map((key) => <div><small>{key}</small><b data-prayer={key}>{row?.[key] ?? 'Not available'}</b>{key !== 'sunrise' && <span data-iqamah={key}>Iqamah {row?.iqamah?.[key] ?? campus.iqamah[key]}</span>}</div>)}</div>
+          <div class="prayer-lead"><div class="prayer-meta"><span id="campus-name">{campus.name}</span><span id="today">{today}</span></div><p>Next prayer</p><div class="next-summary"><strong class="next-name" id="next-name">{timing ? prayerNames[timing.nextKey] : 'Schedule'}</strong><b id="next-time">{timing?.nextTime ?? 'Not available'}</b></div><span class="countdown-label">Begins in <span role="timer" aria-live="off" id="prayer-countdown">{timing ? formatPrayerCountdown(timing.countdownSeconds) : '--:--:--'}</span></span></div>
+          <ul class="schedule" id="schedule" aria-label="Daily prayer times">{prayerKeys.map((key) => <li aria-label={`${prayerNames[key]}, Adhan ${row?.[key] ?? 'not available'}, ${key === 'sunrise' ? 'no iqamah' : `Iqamah ${row?.iqamah?.[key] ?? campus.iqamah[key]}`}`} data-prayer-card={key} data-prayer-state={timing?.nextKey === key ? 'next' : timing?.currentKey === key ? 'current' : 'upcoming'}><small>{prayerNames[key]}</small><span class="adhan-label">Adhan</span><b data-prayer={key}>{row?.[key] ?? 'Not available'}</b>{key !== 'sunrise' && <span data-iqamah={key}>Iqamah {row?.iqamah?.[key] ?? campus.iqamah[key]}</span>}</li>)}</ul>
           <div id="jumuah" class="jumuah"><strong>Jumuah</strong>{campus.jumuah.map((gathering) => <span>{gathering.label} · {gathering.time}</span>)}</div>
         </div>
         <p class="prayer-disclaimer">Times are for the selected campus. Confirm locally for special days and schedule changes.</p>
@@ -83,6 +85,8 @@ const offeringSections = [
       </div>
     </section>
 
+    {site.volunteer.enabled && volunteerHref && <section class="volunteer-section" id="volunteer" aria-labelledby="volunteer-title"><div class="container volunteer-card reveal"><div class="volunteer-mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2"><path d="M32 54S9 42 9 23a11 11 0 0 1 20-7l3 4 3-4a11 11 0 0 1 20 7c0 19-23 31-23 31Z"/><path d="M32 20v25M21 32h22"/></svg></div><div class="volunteer-copy"><h2 id="volunteer-title">{site.volunteer.title}</h2><p>{site.volunteer.description}</p></div><a class="button gold volunteer-action" href={volunteerHref}>{site.volunteer.buttonLabel} <span aria-hidden="true">→</span></a></div></section>}
+
     <section class="give-section"><div class="container give-card reveal"><div><h2>Your generosity makes room for everyone.</h2></div><div><p>Support prayer, learning, care, and connection across our community.</p><a class="button gold" href={`${basePath}donate/`}>Make a donation <span aria-hidden="true">↗</span></a></div></div></section>
 
     <section class="container section visit" id="locations" aria-labelledby="locations-title">
@@ -101,7 +105,7 @@ const offeringSections = [
 
 <style is:global>
 .hero{min-height:760px;padding:clamp(5rem,10vw,9rem) 0 7rem;display:grid;grid-template-columns:1.06fr .94fr;align-items:center;gap:clamp(2rem,6vw,6rem)}.hero-copy{position:relative;z-index:1}.hero h1{margin:.6rem 0 1.8rem;color:var(--green);max-width:760px}.type-line{display:inline-block;color:var(--gold);min-width:5.8em}.type-line.typing:after{content:"";display:inline-block;width:3px;height:.75em;margin-left:.08em;background:currentColor;animation:blink .8s steps(1) infinite}.hero-copy>p{max-width:540px;font-size:1.08rem;color:var(--muted)}.hero-actions{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;margin-top:2rem}.text-link{min-height:44px;display:inline-flex;align-items:center;gap:.5rem;color:var(--green);font-weight:800;text-decoration:none;border-bottom:1px solid var(--gold)}.hero-art{position:relative;min-height:570px}.arch-window{position:absolute;inset:0 0 0 14%;display:grid;place-items:center;border-radius:260px 260px 22px 22px;background:var(--green);overflow:hidden;box-shadow:var(--shadow)}.arch-window:before,.arch-window:after{content:"";position:absolute;border:1px solid rgba(224,193,128,.34);border-radius:50%}.arch-window:before{width:430px;height:430px}.arch-window:after{width:300px;height:300px}.arch-window img{position:relative;z-index:1;width:38%;opacity:.92}.sun{position:absolute;z-index:-1;width:190px;height:190px;right:-12%;top:2%;border-radius:50%;background:var(--gold)}.hero-note{position:absolute;z-index:2;left:0;bottom:8%;display:grid;padding:1.1rem 1.4rem;border:1px solid var(--line);background:var(--paper);box-shadow:var(--shadow)}.hero-note span{font-family:Georgia,serif;font-size:1.8rem;color:var(--green)}.hero-note small{color:var(--muted)}
-.prayer-wrap{padding:clamp(4.5rem,8vw,7rem) 0;background:var(--green);color:white}.section-head.light h2{color:white}.section-head.light .eyebrow{color:#e3bd77}.section-head form{display:grid;gap:.3rem;min-width:min(100%,300px)}.section-head label{font-size:.7rem;text-transform:uppercase;letter-spacing:.14em;color:#c7d6d0;font-weight:800}.section-head select{min-height:48px;padding:.6rem 2.5rem .6rem .8rem;border:1px solid rgba(255,255,255,.24);background:#21493f;color:white;border-radius:5px}.prayer-panel{display:grid;grid-template-columns:1.05fr 1.95fr;border-top:1px solid rgba(255,255,255,.2);border-bottom:1px solid rgba(255,255,255,.2)}.prayer-lead{padding:2rem 2rem 2rem 0;border-right:1px solid rgba(255,255,255,.2)}.prayer-meta{display:flex;justify-content:space-between;gap:1rem;color:#bdd0c9;font-size:.82rem}.prayer-lead>p{margin:3.2rem 0 .1rem;color:#bdd0c9}.next-name{font-size:clamp(2.2rem,5vw,4rem);font-family:"Trebuchet MS",sans-serif}.next-row{display:flex;align-items:end;justify-content:space-between;gap:1rem;margin-top:1.2rem}.next-row b{font-size:2rem;color:#e3bd77}.next-row span{font-size:.8rem;color:#bdd0c9}.schedule{display:grid;grid-template-columns:repeat(3,1fr)}.schedule>div{display:grid;align-content:center;gap:.4rem;padding:1.35rem;border-right:1px solid rgba(255,255,255,.13);border-bottom:1px solid rgba(255,255,255,.13)}.schedule small{text-transform:capitalize;color:#bdd0c9}.schedule b{font-size:1.45rem;color:#e3bd77}.schedule span{font-size:.72rem;color:#9eb5ad}.jumuah{grid-column:1/-1;display:flex;gap:1.5rem;align-items:center;padding:1.2rem 0;color:#dfe9e5}.jumuah strong{color:#e3bd77}.prayer-disclaimer{margin:1rem 0 0;color:#9eb5ad;font-size:.78rem}
+.prayer-wrap{padding:clamp(4.5rem,8vw,7rem) 0;background:var(--prayer-accent,var(--green));color:white}.section-head.light h2{color:white}.prayer-panel{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(0,2fr);gap:1rem}.prayer-lead{display:grid;align-content:center;justify-items:center;padding:2rem;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:rgba(255,255,255,.05)}.prayer-meta{display:flex;justify-content:center;flex-wrap:wrap;gap:.5rem 1rem;color:#bdd0c9;font-size:.82rem}.prayer-lead>p{margin:1.8rem 0 .2rem;color:#bdd0c9}.next-summary{display:flex;align-items:baseline;justify-content:center;gap:.8rem;flex-wrap:wrap}.next-name{font-size:clamp(2.2rem,5vw,3.4rem);font-family:"Trebuchet MS",sans-serif}.next-summary>b{font-size:1.6rem;color:#e3bd77}.countdown-label{display:grid;margin-top:1rem;color:#bdd0c9;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}.countdown-label [role="timer"]{color:white;font-size:1.25rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.08em}.schedule{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;padding:0;margin:0;list-style:none}.schedule>li{position:relative;display:grid;align-content:center;gap:.35rem;min-width:0;min-height:132px;padding:1.2rem;border:1px solid rgba(255,255,255,.15);border-radius:18px;background:rgba(255,255,255,.04);text-align:left}.schedule>li[data-prayer-state="current"]{border-color:rgba(227,189,119,.5);background:rgba(227,189,119,.08)}.schedule>li[data-prayer-state="next"]{border-color:var(--prayer-background,#e3bd77);background:var(--prayer-background,#e3bd77);color:var(--prayer-accent,#173c34)}.schedule>li[data-prayer-state="next"] small,.schedule>li[data-prayer-state="next"] b,.schedule>li[data-prayer-state="next"] span{color:var(--prayer-accent,#173c34)}.schedule small{text-transform:uppercase;letter-spacing:.1em;color:#bdd0c9}.schedule b{font-size:1.55rem;color:#fff;font-variant-numeric:tabular-nums}.schedule span{font-size:.75rem;color:#9eb5ad}.jumuah{grid-column:1/-1;display:flex;justify-content:center;gap:1.5rem;align-items:center;padding:1.2rem;border-top:1px solid rgba(255,255,255,.18);color:#dfe9e5}.jumuah strong{color:#e3bd77}.prayer-disclaimer{margin:1rem 0 0;color:#9eb5ad;font-size:.78rem}
 .offering-section .section-head p{font-size:1.05rem}.service-grid{border-top:1px solid var(--line)}.service-card{display:grid;grid-template-columns:70px 1fr auto;gap:1.5rem;align-items:center;padding:2rem 0;border-bottom:1px solid var(--line)}.service-card>span{color:var(--gold);font-size:.78rem}.service-card h3{margin-bottom:.45rem;color:var(--green);font-size:clamp(1.45rem,3vw,2.1rem)}.service-card p{margin:0;max-width:650px;color:var(--muted)}.service-card i{display:grid;place-items:center;width:48px;height:48px;border:1px solid var(--line);border-radius:50%;color:var(--green);font-style:normal}
 .community-section{padding:clamp(4.5rem,9vw,8rem) 0;background:var(--cream)}.community-filters{display:flex;gap:.4rem;flex-wrap:wrap}.filter{min-height:42px;padding:.5rem .9rem;border:1px solid #cfc1aa;border-radius:99px;background:transparent;color:var(--green);font-weight:750}.filter.active{background:var(--green);color:white;border-color:var(--green)}.community-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(2.5rem,7vw,7rem)}.column-title{padding-bottom:1rem;border-bottom:1px solid #cfc1aa}.column-title>span,.card-label{text-transform:uppercase;letter-spacing:.13em;font-size:.68rem;font-weight:850;color:var(--gold)}.column-title h2{font-size:clamp(2rem,4vw,3rem);margin:.25rem 0}.event-card{display:grid;grid-template-columns:80px 1fr;gap:1.2rem;padding:1.6rem 0;border-bottom:1px solid #cfc1aa}.event-card time{display:grid;align-content:start;text-align:center;border-right:1px solid #cfc1aa;color:var(--green)}.event-card time b{font-size:2rem}.event-card time span{text-transform:uppercase;font-size:.7rem}.event-card h3,.news-card h3{margin:.35rem 0 .55rem;color:var(--green)}.event-card p,.news-card p{margin-bottom:.7rem;color:var(--muted)}.event-card small{color:var(--green)}.news-card{padding:1.6rem 0;border-bottom:1px solid #cfc1aa}.news-card:first-child{padding-top:2rem}
 .give-section{padding:0 0 clamp(4.5rem,9vw,8rem);background:var(--cream)}.give-card{display:grid;grid-template-columns:1.3fr .7fr;gap:4rem;padding:clamp(2.2rem,6vw,5rem);background:#382820;color:white}.give-card h2{margin:.4rem 0 0;color:#fff}.give-card>div:last-child{align-self:end}.give-card p{color:#d8cbc2}.button.gold{background:var(--gold);border-color:var(--gold);color:#21170f}.visit{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(3rem,8vw,8rem);align-items:center}.visit-copy h2{color:var(--green);margin:.5rem 0 1rem}.visit-copy p{color:var(--muted);max-width:360px}.location-card{display:grid;grid-template-columns:70px 1fr;gap:1.5rem;padding:clamp(1.5rem,4vw,3rem);border:1px solid var(--line);background:var(--paper);box-shadow:var(--shadow)}.location-number{color:var(--gold)}.location-card h3{margin:.5rem 0;font-size:clamp(1.5rem,3vw,2.4rem);color:var(--green)}.location-card p{color:var(--muted);white-space:pre-line}.location-card a{color:var(--green);font-weight:800}.facility-list{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.5rem}.facility-list span{padding:.35rem .7rem;border:1px solid var(--line);border-radius:99px;font-size:.72rem;color:var(--muted)}.footer{background:#211914;color:white}.footer .site-footer{grid-template-columns:1fr auto auto;border:0;padding:3.5rem 0}.footer-brand{color:white}.footer-logo{display:grid;place-items:center;width:42px;height:42px;padding:4px;border-radius:50%;background:var(--ivory);overflow:hidden}.footer-logo img{display:block;width:auto;max-width:26px;height:auto;max-height:26px;object-fit:contain}.footer-brand img{width:100%;height:100%;object-fit:contain}.site-footer p{margin:.8rem 0 0;color:#a99d96;max-width:330px;font-size:.82rem}.footer-links,.footer-meta{display:grid;align-content:start;gap:.55rem}.footer-links a,.footer-meta a{text-decoration:none}.footer-meta span{color:#a99d96}
@@ -123,7 +127,7 @@ main h2{font-size:clamp(2rem,4vw,3.1rem);line-height:1.2}
 .hero-note span{font-size:1.8rem}.hero-note small{font-size:.9rem}
 .section-head{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;text-align:center;margin-bottom:3rem}
 .section-head h2{margin:0}.section-head p{max-width:600px;margin:0 auto;line-height:1.7}
-.prayer-wrap{background:#164b3f;border-radius:0;padding:5rem 0}
+.prayer-wrap{background:var(--prayer-accent,var(--green));border-radius:0;padding:5rem 0}
 .prayer-panel{border:1px solid #ffffff30;border-radius:24px;overflow:hidden;background:#ffffff05}
 .prayer-lead{padding:2rem}.prayer-meta{justify-content:center;flex-wrap:wrap}.prayer-lead>p{margin:1.6rem 0 .5rem}
 .next-row{justify-content:center;align-items:center;flex-wrap:wrap}.next-name{font-size:2.9rem}
@@ -141,6 +145,7 @@ main h2{font-size:clamp(2rem,4vw,3.1rem);line-height:1.2}
 .event-card time{border:0;border-radius:14px;background:#e9efe6;padding:.6rem 1.4rem;min-width:80px}.event-card time b{font-family:Lora,serif;font-size:1.9rem}
 .event-card h3,.news-card h3{font-size:1.5rem}.event-card p,.news-card p{line-height:1.8}
 .news-card:first-child{padding-top:2rem}.card-label{letter-spacing:.06em}
+.volunteer-section{padding:5rem 0;background:#faf8f0}.volunteer-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:clamp(1.5rem,4vw,3rem);padding:clamp(2.2rem,5vw,4rem);border-radius:28px;background:#164b3f;color:white;box-shadow:0 18px 50px #163e2d18;text-align:left}.volunteer-mark{display:grid;place-items:center;width:clamp(72px,9vw,104px);aspect-ratio:1;border:1px solid #ffffff38;border-radius:50%;color:#e3bd77;background:#ffffff0d}.volunteer-mark svg{width:55%;height:55%}.volunteer-copy h2{margin:0 0 .7rem;color:white;text-align:left}.volunteer-copy p{max-width:650px;margin:0;color:#dce8e4;font-size:1.08rem;line-height:1.7}.volunteer-action{white-space:nowrap;justify-content:center}
 .give-section{padding:1rem 0 5rem;background:#f1eee4}.give-card{display:block;max-width:1000px;border-radius:28px;background:#164b3f;padding:3.5rem 2rem}
 .give-card h2{max-width:650px;margin:0 auto 1.3rem}.give-card p{color:#e1e9df}.give-card .button{margin-top:.5rem}
 .visit{display:flex;flex-direction:column;gap:2rem;padding-top:5rem;padding-bottom:5rem}.visit-copy p{max-width:560px}
@@ -156,8 +161,8 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
 @keyframes masjid-reveal{from{opacity:0;transform:translateY(22px);filter:blur(4px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
 .site-header{overflow:visible}.nav a{position:relative;transition:color .2s ease}.nav a:after{content:"";position:absolute;left:0;right:0;bottom:-.25rem;height:2px;background:var(--gold);transform:scaleX(0);transform-origin:center;transition:transform .25s ease}.nav a[aria-current="location"]{color:var(--green)}.nav a[aria-current="location"]:after{transform:scaleX(1)}
 .hero-art{transform:translateY(var(--hero-shift,0px))}
-@media(max-width:900px){.service-grid{grid-template-columns:1fr;max-width:580px;margin:auto}.community-grid{grid-template-columns:1fr}.hero{padding:4rem 0}.jumuah{flex-wrap:wrap}.service-card p{max-width:40ch}}
-@media(max-width:600px){.hero h1{font-size:2.6rem}.hero-copy>.hero-tagline{font-size:1.2rem}.hero-copy>p{font-size:1.05rem}.hero-actions{gap:1rem}.service-card{padding:2rem 1.5rem}.prayer-lead{padding:1.5rem}.give-card{width:calc(100% - 2rem);padding:2.5rem 1.5rem}.section-head{margin-bottom:2rem}.jumuah{align-items:center}.community-filters{width:auto}}
+@media(max-width:900px){.service-grid{grid-template-columns:1fr;max-width:580px;margin:auto}.community-grid{grid-template-columns:1fr}.hero{padding:4rem 0}.jumuah{flex-wrap:wrap}.service-card p{max-width:40ch}.volunteer-card{grid-template-columns:auto minmax(0,1fr)}.volunteer-action{grid-column:2;justify-self:start}}
+@media(max-width:600px){.hero h1{font-size:2.6rem}.hero-copy>.hero-tagline{font-size:1.2rem}.hero-copy>p{font-size:1.05rem}.hero-actions{gap:1rem}.service-card{padding:2rem 1.5rem}.prayer-lead{padding:1.5rem}.give-card{width:calc(100% - 2rem);padding:2.5rem 1.5rem}.section-head{margin-bottom:2rem}.jumuah{align-items:center}.community-filters{width:auto}.volunteer-card{width:calc(100% - 2rem);grid-template-columns:1fr;text-align:center}.volunteer-mark{margin:auto}.volunteer-copy h2{text-align:center}.volunteer-action{grid-column:auto;justify-self:stretch}}
 @media(prefers-reduced-motion:reduce){.type-line.typing:after{animation:none}.reveal.is-pending{opacity:1;transform:none;filter:none}.reveal.is-visible{animation:none}.nav a,.nav a:after{transition:none}.hero-art{transform:none}.service-card,.event-card,.news-card{transition:none}.service-card:hover,.event-card:hover,.news-card:hover{transform:none}}
 
 .site-header>.brand{min-width:0}.brand-name{display:block;max-width:32ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.campus-locations{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:1.5rem;width:100%;max-width:1000px}.location-card{width:100%;min-width:0}.location-card[data-selected="true"]{border-color:#759888}.campus-selection{font-size:.9rem;color:var(--green)}.contact-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:.6rem 1.3rem}.contact-actions a{display:inline-flex;align-items:center;min-height:44px}.location-select{margin:1.25rem auto 0}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -166,7 +171,11 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
 @media(max-width:430px){.brand-name{display:none}#campus-dialog{padding:1.5rem 1rem;border-radius:22px}#campus-dialog h2{font-size:2rem}}
 </style>
 
-<script define:vars={{ basePath, initialSite: site }}>
+<script>
+  // @ts-nocheck
+  import { formatPrayerCountdown, getPrayerTiming, localDate } from '../lib/site';
+  import initialSite from '../lib/site.json';
+  const basePath = import.meta.env.BASE_URL;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const header = document.querySelector('#site-header');
   const navLinks = [...document.querySelectorAll('[data-nav-target]')];
@@ -229,19 +238,22 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
     applyFilter(document.querySelector('[data-filter].active')?.dataset.filter || 'all');
     observeReveals();
   };
+  const prayerNames={fajr:'Fajr',sunrise:'Shuruq',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha'};
+  let activeCampus=null;
+  const updatePrayer=()=>{
+    if(!activeCampus)return;const now=new Date();const date=localDate(activeCampus.timezone,now);const row=activeCampus.timetable.find((item)=>item.date===date);const timing=getPrayerTiming(activeCampus.timetable,activeCampus.timezone,now);
+    text('#today',date);text('#campus-name',activeCampus.name);text('#next-name',timing?prayerNames[timing.nextKey]:'Schedule');text('#next-time',timing?.nextTime||'Not available');text('#prayer-countdown',timing?formatPrayerCountdown(timing.countdownSeconds):'--:--:--');
+    ['fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach((key)=>{const adhan=row?.[key]||'Not available';const iqamah=row?.iqamah?.[key]||activeCampus.iqamah[key];text(`[data-prayer="${key}"]`,adhan);if(key!=='sunrise')text(`[data-iqamah="${key}"]`,`Iqamah ${iqamah}`);const card=document.querySelector(`[data-prayer-card="${key}"]`);if(card){card.dataset.prayerState=timing?(key===timing.nextKey?'next':key===timing.currentKey?'current':'upcoming'):'upcoming';card.setAttribute('aria-label',`${prayerNames[key]}, Adhan ${adhan}, ${key==='sunrise'?'no iqamah':`Iqamah ${iqamah}`}`)}});
+  };
+  setInterval(updatePrayer,1000);
   const renderCampus = (content, campusId) => {
     const campus = content.campuses.find((item) => item.id === campusId) || content.campuses[0]; if (!campus) return;
+    activeCampus=campus;
     const locationLabel=content.campuses.length===1?'Location':'Locations';
     document.querySelectorAll('[data-location-label]').forEach((node)=>{node.textContent=locationLabel;});
     campusDialogOptions?.setAttribute('aria-label',locationLabel);
     text('#location-copy',content.campuses.length===1?'Get directions or contact the team directly.':'Choose your location, get directions, or contact its team directly.');
-    const now = new Date();
-    const date = new Intl.DateTimeFormat('en-CA',{timeZone:campus.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
-    const currentTime = new Intl.DateTimeFormat('en-US',{timeZone:campus.timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now);
-    const row = campus.timetable.find((item) => item.date === date) || campus.timetable[0];
-    const keys=['fajr','dhuhr','asr','maghrib','isha']; const nextKey=keys.find((key)=>row && row[key]>currentTime)||'fajr';
-    text('#today',date); text('#campus-name',campus.name); text('#next-name',nextKey[0].toUpperCase()+nextKey.slice(1)); text('#next-time',row?.[nextKey]||'Not available'); text('#next-iqamah',`Iqamah ${row?.iqamah?.[nextKey]||campus.iqamah[nextKey]}`);
-    ['fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach((key)=>{text(`[data-prayer="${key}"]`,row?.[key]||'Not available');if(key!=='sunrise')text(`[data-iqamah="${key}"]`,`Iqamah ${row?.iqamah?.[key]||campus.iqamah[key]}`)});
+    updatePrayer();
     const jumuah=document.querySelector('#jumuah'); if(jumuah){jumuah.replaceChildren(element('strong','','Jumuah'),...campus.jumuah.map((item)=>element('span','',`${item.label} · ${item.time}`)))}
     const locations=document.querySelector('#campus-locations');
     locations?.replaceChildren(...content.campuses.map((item)=>{
@@ -276,7 +288,7 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
   filters.forEach((button)=>button.addEventListener('click',()=>{filters.forEach((item)=>item.classList.toggle('active',item===button));applyFilter(button.dataset.filter)}));
   document.querySelectorAll('[data-select-campus]').forEach((button)=>button.addEventListener('click',()=>selectCampus(button.dataset.selectCampus,window.__openMasjidSite||initialSite)));
   const requested=new URLSearchParams(location.search).get('campus');const remembered=localStorage.getItem('openmasjid-campus');
-  const initializeCampus=(content)=>{window.__openMasjidSite=content;const selected=requested||remembered||content.campuses[0]?.id;selectCampus(selected,content,Boolean(remembered));if(!remembered)showCampusChooser(content,selected)};
+  const initializeCampus=(content)=>{window.__openMasjidSite=content;const prayerSection=document.querySelector('#prayer');prayerSection?.style.setProperty('--prayer-accent',content.organization.theme.accent);prayerSection?.style.setProperty('--prayer-background',content.organization.theme.background);const selected=requested||remembered||content.campuses[0]?.id;selectCampus(selected,content,Boolean(remembered));if(!remembered)showCampusChooser(content,selected)};
   fetch(new URL(`${basePath}data/v1/site.json`,location.href),{cache:'no-store'}).then((response)=>{if(!response.ok)throw new Error(String(response.status));return response.json()}).then(initializeCampus).catch(()=>initializeCampus(initialSite));
   const typeLine=document.querySelector('.type-line'); if(typeLine&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const words=JSON.parse(typeLine.dataset.words);let word=0,char=words[0].length,deleting=true;typeLine.classList.add('typing');const tick=()=>{const target=words[word];if(deleting){char-=1;if(char===0){typeLine.textContent='';deleting=false;word=(word+1)%words.length;setTimeout(tick,350);return}}else{char+=1;if(char===target.length){deleting=true;typeLine.textContent=target;setTimeout(tick,1500);return}}typeLine.textContent=(deleting?target:words[word]).slice(0,char);setTimeout(tick,deleting?65:105)};setTimeout(tick,1400)}
 </script>

@@ -33,6 +33,24 @@ fun validateSite(site: Site) {
         DonationMode.external -> { require(site.donation.customHtml.isEmpty() && site.donation.externalUrl != null) { "External donation configuration is incomplete" }; requireHttps(site.donation.externalUrl) }
         DonationMode.custom -> require(site.donation.externalUrl == null && site.donation.customHtml.isNotBlank()) { "Custom donation configuration is incomplete" }
     }
+    val volunteer = site.volunteer
+    require(validText(volunteer.title, 200) && validText(volunteer.description, 10000) && validText(volunteer.buttonLabel, 80) && volunteer.opportunities.size <= 50) { "Invalid volunteer content" }
+    require(volunteer.opportunities.map { it.id }.toSet().size == volunteer.opportunities.size) { "Duplicate volunteer opportunity id" }
+    volunteer.opportunities.forEach { opportunity ->
+        require(validSlug(opportunity.id) && validText(opportunity.title, 200) && validText(opportunity.description, 10000) && validText(opportunity.buttonLabel, 80)) { "Invalid volunteer opportunity" }
+        requireHttps(opportunity.url)
+    }
+    when (volunteer.mode) {
+        VolunteerMode.external -> {
+            require(volunteer.opportunities.isEmpty()) { "Direct volunteer mode cannot include opportunities" }
+            volunteer.externalUrl?.let(::requireHttps)
+            if (volunteer.enabled) require(volunteer.externalUrl != null) { "Enabled direct volunteer mode requires a URL" }
+        }
+        VolunteerMode.page -> {
+            require(volunteer.externalUrl == null) { "Volunteer page mode cannot include a direct URL" }
+            if (volunteer.enabled) require(volunteer.opportunities.isNotEmpty()) { "Enabled volunteer page requires opportunities" }
+        }
+    }
     site.campuses.forEach { c ->
         require(validText(c.name,160) && validText(c.address,500) && validText(c.city,120) && validText(c.phone,40) && validEmail(c.email) && c.facilities.size <= 40 && c.facilities.all { validText(it,100) } && c.jumuah.size <= 10 && c.timetable.size <= 1500)
         require(c.timezone in ZoneId.getAvailableZoneIds()) { "Invalid timezone" }; require(c.latitude in -90.0..90.0 && c.longitude in -180.0..180.0)

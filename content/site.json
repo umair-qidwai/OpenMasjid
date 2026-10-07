@@ -22,6 +22,37 @@
     "externalUrl": null,
     "customHtml": ""
   },
+  "volunteer": {
+    "enabled": true,
+    "title": "Volunteer with us",
+    "description": "Offer your time, skills, and care where they can make a real difference in our community.",
+    "mode": "page",
+    "buttonLabel": "Explore opportunities",
+    "externalUrl": null,
+    "opportunities": [
+      {
+        "id": "sunday-school",
+        "title": "Sunday school",
+        "description": "Support young learners as a teacher, classroom helper, or welcoming presence each week.",
+        "buttonLabel": "Volunteer for Sunday school",
+        "url": "https://forms.example.org/sunday-school"
+      },
+      {
+        "id": "community-events",
+        "title": "Community events",
+        "description": "Help welcome guests, prepare spaces, and make gatherings feel thoughtful and organized.",
+        "buttonLabel": "Help with community events",
+        "url": "https://forms.example.org/events"
+      },
+      {
+        "id": "community-care",
+        "title": "Community care",
+        "description": "Contribute meals, transportation, outreach, or practical support for neighbors who need it.",
+        "buttonLabel": "Join the care team",
+        "url": "https://forms.example.org/community-care"
+      }
+    ]
+  },
   "campuses": [
     {
       "id": "demo-central",

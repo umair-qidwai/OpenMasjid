@@ -5,6 +5,38 @@ import org.junit.Test
 
 class ContractTest {
     private fun fixture() = javaClass.getResource("/demo-site.json")!!.readText()
+    private fun withVolunteer(value: String) = fixture().replaceFirst("{", "{\"volunteer\":$value,")
+    @Test fun volunteerDefaultsAndDecodesPageConfiguration() {
+        assertEquals(Volunteer(), decodeSite(fixture()).volunteer)
+        val site = decodeSite(withVolunteer("""{"enabled":true,"title":"Volunteer","description":"Help the community","mode":"page","buttonLabel":"See opportunities","externalUrl":null,"opportunities":[{"id":"food-pantry","title":"Food pantry","description":"Pack boxes","buttonLabel":"Sign up","url":"HTTPS://example.org/volunteer"}]}"""))
+        assertEquals(VolunteerMode.page, site.volunteer.mode)
+        assertEquals("food-pantry", site.volunteer.opportunities.single().id)
+    }
+    @Test fun volunteerRejectsNullPartialAndUnknownObjects() {
+        val invalid = listOf(
+            "null", "{}", "{\"enabled\":false}",
+            """{"enabled":false,"title":"Volunteer","description":"Help","mode":"external","buttonLabel":"Join","externalUrl":null,"opportunities":[],"unknown":true}""",
+            """{"enabled":false,"title":"Volunteer","description":"Help","mode":"page","buttonLabel":"Join","externalUrl":null,"opportunities":[{"id":"helper","title":"Help","description":"Help","buttonLabel":"Join","url":"https://example.org","unknown":true}]}"""
+        )
+        invalid.forEach { assertThrows(IllegalArgumentException::class.java) { decodeSite(withVolunteer(it)) } }
+    }
+    @Test fun volunteerEnforcesModesBoundsUrlsAndUniqueOpportunityIds() {
+        val site = decodeSite(fixture())
+        val opportunity = VolunteerOpportunity("helper", "Help", "Help out", "Join", "https://example.org/help")
+        val base = Volunteer()
+        val invalid = listOf(
+            base.copy(enabled = true),
+            base.copy(opportunities = listOf(opportunity)),
+            base.copy(mode = VolunteerMode.page, externalUrl = "https://example.org"),
+            base.copy(enabled = true, mode = VolunteerMode.page),
+            base.copy(mode = VolunteerMode.page, opportunities = listOf(opportunity, opportunity)),
+            base.copy(mode = VolunteerMode.page, opportunities = List(51) { opportunity.copy(id = "helper-$it") }),
+            base.copy(mode = VolunteerMode.page, opportunities = listOf(opportunity.copy(url = "http://example.org"))),
+            base.copy(title = " "),
+            base.copy(buttonLabel = "x".repeat(81))
+        )
+        invalid.forEach { assertThrows(IllegalArgumentException::class.java) { validateSite(site.copy(volunteer = it)) } }
+    }
     @Test fun rejectsDuplicateReferencesAndOutOfRangeContentTimestamps() {
         val site = decodeSite(fixture())
         val event = Event("test-event", "Test", "Description", "2026-10-01T12:00:00Z", "2026-10-01T13:00:00Z", listOf(site.campuses.first().id), "Hall", "Community")

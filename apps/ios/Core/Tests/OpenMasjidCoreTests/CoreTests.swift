@@ -5,6 +5,45 @@ final class OpenMasjidCoreTests: XCTestCase {
     private let json = """
     {"schemaVersion":1,"updatedAt":"2026-01-01T12:00:00Z","organization":{"name":"Demo","tagline":"Fictional demo","description":"Demo","email":"hello@example.org","phone":"+1 555 0100","website":"https://example.org","logo":"/logo.png","theme":{"accent":"#A67C43","background":"#F6F3EC"}},"donation":{"mode":"none","externalUrl":null,"customHtml":""},"campuses":[{"id":"north-campus","name":"North","address":"1 Main","city":"Demo","timezone":"America/New_York","latitude":1,"longitude":2,"phone":"+1 555 0100","email":"north@example.org","facilities":[],"calculation":{"method":"NorthAmerica","madhab":"Shafi"},"iqamah":{"fajr":"05:30","dhuhr":"13:00","asr":"17:00","maghrib":"19:00","isha":"20:30"},"jumuah":[{"label":"First","time":"13:15"}],"timetable":[{"date":"2026-01-01","fajr":"05:00","sunrise":"06:30","dhuhr":"12:10","asr":"15:00","maghrib":"17:40","isha":"19:00","source":"uploaded"}]}],"events":[{"id":"open-house","title":"Open House","description":"Welcome","startsAt":"2026-01-02T18:00:00-05:00","endsAt":"2026-01-02T20:00:00-05:00","campusIds":[],"location":"Hall","category":"Community"}],"announcements":[{"id":"welcome","title":"Welcome","body":"Hello","campusIds":["north-campus"],"publishedAt":"2026-01-01T10:00:00Z","expiresAt":null}]}
     """
+    private func decode(volunteer: Any) throws -> Site {
+        var root = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
+        root["volunteer"] = volunteer
+        return try JSONDecoder().decode(Site.self, from: JSONSerialization.data(withJSONObject: root))
+    }
+    func testVolunteerDefaultsAndDecodesPageConfiguration() throws {
+        let legacy = try JSONDecoder().decode(Site.self, from: Data(json.utf8))
+        XCTAssertEqual(legacy.volunteer, Volunteer())
+        let site = try decode(volunteer: [
+            "enabled": true, "title": "Volunteer", "description": "Help the community",
+            "mode": "page", "buttonLabel": "See opportunities", "externalUrl": NSNull(),
+            "opportunities": [["id": "food-pantry", "title": "Food pantry", "description": "Pack boxes", "buttonLabel": "Sign up", "url": "HTTPS://example.org/volunteer"]]
+        ])
+        XCTAssertEqual(site.volunteer.mode, .page)
+        XCTAssertEqual(site.volunteer.opportunities.first?.id, "food-pantry")
+    }
+    func testVolunteerRejectsNullPartialAndUnknownObjects() throws {
+        let invalid: [Any] = [
+            NSNull(), [:], ["enabled": false],
+            ["enabled": false, "title": "Volunteer", "description": "Help", "mode": "external", "buttonLabel": "Join", "externalUrl": NSNull(), "opportunities": [], "unknown": true],
+            ["enabled": false, "title": "Volunteer", "description": "Help", "mode": "page", "buttonLabel": "Join", "externalUrl": NSNull(), "opportunities": [["id": "helper", "title": "Help", "description": "Help", "buttonLabel": "Join", "url": "https://example.org", "unknown": true]]]
+        ]
+        for value in invalid { XCTAssertThrowsError(try decode(volunteer: value)) }
+    }
+    func testVolunteerEnforcesModesBoundsURLsAndUniqueOpportunityIDs() throws {
+        let opportunity: [String: Any] = ["id": "helper", "title": "Help", "description": "Help out", "buttonLabel": "Join", "url": "https://example.org/help"]
+        let base: [String: Any] = ["enabled": false, "title": "Volunteer", "description": "Help", "mode": "external", "buttonLabel": "Join", "externalUrl": NSNull(), "opportunities": []]
+        var invalid = [[String: Any]]()
+        var value = base; value["enabled"] = true; invalid.append(value)
+        value = base; value["opportunities"] = [opportunity]; invalid.append(value)
+        value = base; value["mode"] = "page"; value["externalUrl"] = "https://example.org"; invalid.append(value)
+        value = base; value["enabled"] = true; value["mode"] = "page"; invalid.append(value)
+        value = base; value["mode"] = "page"; value["opportunities"] = [opportunity, opportunity]; invalid.append(value)
+        value = base; value["mode"] = "page"; value["opportunities"] = Array(repeating: opportunity, count: 51); invalid.append(value)
+        value = base; value["mode"] = "page"; var badURL = opportunity; badURL["url"] = "http://example.org"; value["opportunities"] = [badURL]; invalid.append(value)
+        value = base; value["title"] = " "; invalid.append(value)
+        value = base; value["buttonLabel"] = String(repeating: "x", count: 81); invalid.append(value)
+        for configuration in invalid { XCTAssertThrowsError(try decode(volunteer: configuration)) }
+    }
     func testAcceptsAdditivePrograms() throws {
         var root = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
         root["programs"] = [["id": "prayer", "title": "Prayer", "description": "Fictional", "campusIds": ["north-campus"], "details": ["enabled": true, "content": "Join us", "image": "/assets/prayer.jpg"]]]
