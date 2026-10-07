@@ -13,3 +13,7 @@ run_worker_first = ["/api/*"]
 [vars]
 # Configure runtime values and secrets in Cloudflare after the first deploy.
 # Never commit GitHub credentials or SESSION_SECRET here.
+
+# Cloudflare Workers Builds runs `wrangler preview` for pull-request branches.
+# This block is required even when previews need no divergent bindings.
+[previews]
