@@ -79,7 +79,7 @@ document.querySelector('#add-volunteer-opportunity').addEventListener('click', (
 editor.addEventListener('input', () => { state.dirty = true; message.textContent='Unsaved local changes'; });
 editor.addEventListener('submit',(e)=>{e.preventDefault(); try { syncForm(state, editor); localStorage.setItem('openmasjid-draft',JSON.stringify(state.content)); state.dirty=false; message.textContent='Saved locally · validated, not published'; } catch (error) { message.textContent=`Save rejected: ${error.message}`; }});
 document.querySelector('#export-json').addEventListener('click', () => { try { syncForm(state, editor); exportDraft(state.content); } catch (error) { message.textContent = `Export rejected: ${error.message}`; } });
-document.querySelector('#import-json').addEventListener('change',(e)=>importJson(e.target.files[0],state,()=>{rebuildEditor();applyOrganizationDraft();},message));
+document.querySelector('#import-json').addEventListener('change',(e)=>importJson(e.target.files[0],state,()=>{rebuildEditor();applyOrganizationDraft();updateVolunteerMode(state.content.volunteer.mode);},message));
 document.querySelector('#import-csv').addEventListener('change',(e)=>importCsv(e.target.files[0],state,message));
 document.querySelector('#logo-upload').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];

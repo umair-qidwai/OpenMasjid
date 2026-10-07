@@ -107,7 +107,7 @@ function setPath(target, path, value) {
   const key = parts.at(-1);
   if (key === 'facilities') cursor[key] = value.split(',').map((item) => item.trim()).filter(Boolean);
   else if (key === 'jumuah') cursor[key] = value.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => { const [label, time] = line.split('|'); return { label: label?.trim() ?? '', time: time?.trim() ?? '' }; });
-  else if (path === 'donation.externalUrl') cursor[key] = value.trim() || null;
+  else if (path === 'donation.externalUrl' || path === 'volunteer.externalUrl') cursor[key] = value.trim() || null;
   else if (key === 'expiresAt') cursor[key] = value.trim() || null;
   else if (['latitude', 'longitude'].includes(key)) cursor[key] = Number(value);
   else cursor[key] = value;
