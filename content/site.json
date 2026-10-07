@@ -25,7 +25,7 @@
   "campuses": [
     {
       "id": "demo-central",
-      "name": "Template",
+      "name": "Template 1",
       "address": "100 Example Lane (fictional)",
       "city": "Demo City",
       "timezone": "America/New_York",
@@ -63,7 +63,7 @@
     },
     {
       "id": "demo-riverside",
-      "name": "Template",
+      "name": "Template 2",
       "address": "200 Sample River Road (fictional)",
       "city": "Demo City",
       "timezone": "America/Chicago",

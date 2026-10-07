@@ -254,7 +254,7 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
         if(action==='Directions'){link.target='_blank';link.rel='noopener noreferrer';link.append(' ↗');}actions.append(link);
       });
       const facilities=element('div','facility-list');facilities.append(...item.facilities.map((name)=>element('span','',name)));card.append(actions,facilities);
-      if(!selected&&content.campuses.length>1){const choose=element('button','button secondary location-select','Choose location');choose.type='button';choose.dataset.selectCampus=item.id;choose.addEventListener('click',()=>selectCampus(item.id,content));card.append(choose);}
+      if(!selected&&content.campuses.length>1){const choose=element('button','button secondary location-select',`Switch campus to ${item.name}`);choose.type='button';choose.dataset.selectCampus=item.id;choose.addEventListener('click',()=>selectCampus(item.id,content));card.append(choose);}
       return card;
     }));
     document.querySelectorAll('[data-campus-ids]').forEach((card)=>{const ids=(card.dataset.campusIds||'').split(',').filter(Boolean);card.hidden=ids.length>0&&!ids.includes(campus.id);});
@@ -266,9 +266,9 @@ main .reveal.is-visible{animation:masjid-reveal .7s both;animation-delay:var(--d
     campusDialogOptions.replaceChildren(...content.campuses.map((item,index)=>{
       const label=element('label','campus-choice');const input=element('input');input.type='radio';input.name='campus-choice';input.value=item.id;input.checked=item.id===selectedId||(!selectedId&&index===0);
       const copy=element('span');copy.append(element('b','',item.name),element('small','',item.city));label.append(input,copy);
-      input.addEventListener('change',()=>{campusDialogContinue.disabled=false;campusDialogContinue.textContent='Choose a location';});return label;
+      input.addEventListener('change',()=>{campusDialogContinue.disabled=false;campusDialogContinue.textContent=`Switch campus to ${item.name}`;});return label;
     }));
-    const selected=content.campuses.find((item)=>item.id===selectedId)||content.campuses[0];campusDialogContinue.disabled=false;campusDialogContinue.textContent='Choose a location';
+    const selected=content.campuses.find((item)=>item.id===selectedId)||content.campuses[0];campusDialogContinue.disabled=false;campusDialogContinue.textContent=`Switch campus to ${selected.name}`;
     campusDialogContinue.onclick=()=>{const choice=campusDialogOptions.querySelector('input:checked');if(choice){selectCampus(choice.value,content);campusDialog.close();}};
     if(!campusDialog.open)campusDialog.showModal();
   };
