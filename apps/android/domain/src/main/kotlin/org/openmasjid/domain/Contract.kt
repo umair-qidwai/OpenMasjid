@@ -34,7 +34,7 @@ fun decodeSite(raw: String): Site = runCatching {
     require(raw.toByteArray().size <= 1_048_576) { "Payload exceeds 1 MiB" }
     val document = json.parseToJsonElement(raw).jsonObject
     requireExactVolunteerShape(document)
-    json.decodeFromJsonElement<Site>(document).also(::validateSite)
+    json.decodeFromJsonElement(Site.serializer(), document).also(::validateSite)
 }.getOrElse { if (it is IllegalArgumentException) throw it else throw IllegalArgumentException("Invalid site document", it) }
 
 fun validateSite(site: Site) {
