@@ -7,6 +7,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 
 private val json = Json { ignoreUnknownKeys = false; explicitNulls = true; isLenient = false }
 private val dateRegex = Regex("\\d{4}-\\d{2}-\\d{2}")
@@ -14,8 +17,25 @@ private val timeRegex = Regex("(?:[01]\\d|2[0-3]):[0-5]\\d")
 private val hexRegex = Regex("#[0-9a-fA-F]{6}")
 private val slugRegex = Regex("[a-z0-9]+(?:-[a-z0-9]+)*")
 
-    fun decodeSite(raw: String): Site = runCatching { require(raw.toByteArray().size <= 1_048_576) { "Payload exceeds 1 MiB" }; json.decodeFromString<Site>(raw).also(::validateSite) }
-        .getOrElse { if (it is IllegalArgumentException) throw it else throw IllegalArgumentException("Invalid site document", it) }
+private val volunteerKeys = setOf("enabled", "title", "description", "mode", "buttonLabel", "externalUrl", "opportunities")
+private val volunteerOpportunityKeys = setOf("id", "title", "description", "buttonLabel", "url")
+
+private fun requireExactVolunteerShape(root: JsonObject) {
+    val volunteer = root["volunteer"] ?: return
+    require(volunteer is JsonObject && volunteer.keys == volunteerKeys) { "Invalid volunteer object" }
+    val opportunities = volunteer["opportunities"]
+    require(opportunities is JsonArray) { "Invalid volunteer opportunities" }
+    opportunities.forEach { opportunity ->
+        require(opportunity is JsonObject && opportunity.keys == volunteerOpportunityKeys) { "Invalid volunteer opportunity object" }
+    }
+}
+
+fun decodeSite(raw: String): Site = runCatching {
+    require(raw.toByteArray().size <= 1_048_576) { "Payload exceeds 1 MiB" }
+    val document = json.parseToJsonElement(raw).jsonObject
+    requireExactVolunteerShape(document)
+    json.decodeFromJsonElement<Site>(document).also(::validateSite)
+}.getOrElse { if (it is IllegalArgumentException) throw it else throw IllegalArgumentException("Invalid site document", it) }
 
 fun validateSite(site: Site) {
     require(site.schemaVersion == 1) { "Unsupported schema version" }
