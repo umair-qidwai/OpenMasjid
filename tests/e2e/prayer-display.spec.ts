@@ -38,7 +38,7 @@ test('homepage prayer section has live countdown and accessible prayer cards', a
   await expect(prayer.getByRole('listitem', { name: /^Fajr/ })).toHaveAttribute('data-prayer-state', 'current');
   expect(await prayer.evaluate(el => getComputedStyle(el).getPropertyValue('--prayer-accent').trim())).toBe(content.organization.theme.accent);
   await expect(prayer).toHaveCSS('background-color', 'rgb(246, 244, 237)');
-  await expect(prayer.locator('.prayer-panel')).toHaveCSS('background-color', 'rgb(255, 253, 250)');
+  await expect(shuruq).not.toContainText(/sunrise|iqamah/i);
   await page.clock.runFor(1_000);
   await expect(prayer.getByRole('timer')).toHaveText('00:00:03');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -56,6 +56,7 @@ test('display is a themed full-screen TV view with five prayer cards and Shuruq'
   await expect(prayerCards).toHaveCount(5);
   await expect(page.locator('[data-sunrise-panel]')).toContainText('Shuruq');
   await expect(page.locator('[data-sunrise-panel]')).toContainText('6:58 AM');
+  await expect(page.locator('[data-sunrise-panel]')).not.toContainText(/sunrise|iqamah/i);
   await expect(page.getByRole('listitem', { name: /^Fajr/ })).toContainText('Adhan');
   await expect(page.getByRole('listitem', { name: /Fajr.*Adhan.*5:43 AM.*Iqamah/s })).toBeVisible();
   const boxes = await prayerCards.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()));
@@ -77,6 +78,38 @@ test('display is a themed full-screen TV view with five prayer cards and Shuruq'
   await expect(page.getByRole('timer')).toHaveText('00:00:03');
 });
 
+for (const route of ['/', '/display/']) {
+  test(`${route} uses consistent glass with only the next salah emphasized`, async ({ page }, testInfo) => {
+    await prayerFixture(page);
+    await page.goto(route);
+    const root = page.locator(route === '/' ? '#prayer' : '.display-shell');
+    await expect(root.locator('[data-prayer-card="dhuhr"]')).toHaveAttribute('data-prayer-state', 'next');
+    const styles = await root.locator('[data-prayer-card]').evaluateAll(nodes => nodes.map(node => {
+      const s = getComputedStyle(node);
+      return { state: node.getAttribute('data-prayer-state'), background: s.backgroundColor,
+        image: s.backgroundImage, border: s.borderColor, shadow: s.boxShadow,
+        before: getComputedStyle(node, '::before').content };
+    }));
+    const ordinary = styles.find(s => s.state === 'upcoming')!;
+    const current = styles.find(s => s.state === 'current')!;
+    expect({ ...current, state: 'upcoming' }).toEqual(ordinary);
+    for (const style of styles) {
+      expect(['none', 'normal']).toContain(style.before);
+      expect(style.image).toBe('none');
+      const alpha = Number(style.background.match(/, ([\d.]+)\)$/)?.[1] ?? 1);
+      expect(alpha).toBeLessThanOrEqual(.3);
+      expect(alpha).toBeGreaterThan(0);
+    }
+    expect(styles.find(s => s.state === 'next')!.border).not.toBe(ordinary.border);
+    const sizes = await root.locator('[data-prayer-card] [data-prayer], [data-prayer-card] [data-iqamah]').evaluateAll(nodes => nodes.map(n => parseFloat(getComputedStyle(n).fontSize)));
+    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(route === '/' ? 24 : 44);
+    expect(Math.max(...sizes) / Math.min(...sizes)).toBeLessThan(1.15);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await root.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `/tmp/openmasjid-${route === '/' ? 'home' : 'display'}-glass-${testInfo.project.name}.png`, fullPage: false });
+  });
+}
+
 test('display query campus overrides storage and fetched JSON updates its timetable', async ({ page }) => {
   const content = await prayerFixture(page);
   const second = content.campuses[1];
@@ -87,7 +120,7 @@ test('display query campus overrides storage and fetched JSON updates its timeta
   expect(await page.evaluate(() => localStorage.getItem('openmasjid-campus'))).toBe(second.id);
 });
 
-test('display highlights Shuruq before sunrise without replacing the next-prayer countdown', async ({ page }) => {
+test('display retains Shuruq milestone semantics without a second visual highlight', async ({ page }) => {
   const content = await prayerFixture(page);
   content.campuses[0].timetable[0].sunrise = '12:45';
   content.campuses[0].timetable[0].dhuhr = '13:00';
@@ -95,7 +128,7 @@ test('display highlights Shuruq before sunrise without replacing the next-prayer
   const shuruq = page.locator('[data-sunrise-panel]');
   await expect(shuruq).toHaveAttribute('data-prayer-state', 'next');
   await expect(page.locator('[data-next-name]')).toHaveText('Dhuhr');
-  await expect(shuruq).toHaveCSS('outline-style', 'solid');
+  await expect(shuruq).toHaveCSS('outline-style', 'none');
 });
 
 test('display fits three Jumuah gatherings inside the side panel', async ({ page }) => {
