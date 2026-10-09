@@ -62,7 +62,7 @@ test('display is a themed full-screen TV view with five prayer cards and Shuruq'
   const boxes = await prayerCards.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()));
   expect(new Set(boxes.map(box => Math.round(box.y))).size).toBe(1);
   expect(Math.min(...boxes.map(box => box.width))).toBeGreaterThan(190);
-  expect(Math.min(...boxes.map(box => box.height))).toBeGreaterThan(250);
+  for (const box of boxes) expect(Math.abs(box.width - box.height)).toBeLessThan(1);
   const hero = await page.locator('.time-hero').boundingBox();
   expect(hero).not.toBeNull();
   expect(Math.abs((hero!.x + hero!.width / 2) - 1366 / 2)).toBeLessThan(2);

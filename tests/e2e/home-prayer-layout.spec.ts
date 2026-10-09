@@ -34,8 +34,8 @@ test('homepage uses a centered countdown and six-card prayer grid with full-widt
   const dimensions = await prayer.locator('[data-prayer-card]').evaluateAll(nodes => nodes.map(n => ({ width: n.getBoundingClientRect().width, height: n.getBoundingClientRect().height, fits: n.scrollHeight <= n.clientHeight && n.scrollWidth <= n.clientWidth })));
   for (const card of dimensions) {
     expect(card.fits).toBe(true);
+    expect(Math.abs(card.width - card.height)).toBeLessThan(1);
     if (columns === 3) {
-      expect(Math.abs(card.width - card.height)).toBeLessThan(2);
       expect(card.width).toBeLessThanOrEqual(260);
     }
   }
