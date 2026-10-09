@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480" fill="none">
+  <defs>
+    <pattern id="arcade" width="240" height="240" patternUnits="userSpaceOnUse" stroke="#d9cfb8" stroke-opacity=".22" stroke-width="1.2">
+      <path d="M0 240V144C0 84 54 32 120 0C186 32 240 84 240 144V240M24 240V148C24 100 66 56 120 28C174 56 216 100 216 148V240"/>
+      <path d="M-120 360V264C-120 204 -66 152 0 120C66 152 120 204 120 264V360M120 360V264C120 204 174 152 240 120C306 152 360 204 360 264V360"/>
+    </pattern>
+  </defs>
+  <rect width="480" height="480" fill="url(#arcade)"/>
+</svg>
