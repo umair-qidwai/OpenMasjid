@@ -25,9 +25,9 @@ test('homepage prayer section has live countdown and accessible prayer cards', a
   await expect(prayer.getByRole('timer')).toHaveText('00:00:04');
   await expect(prayer.locator('.web-prayer-board')).toBeVisible();
   const cards = prayer.getByRole('listitem');
-  await expect(cards).toHaveCount(5);
-  for (const name of ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']) await expect(prayer.getByRole('listitem', { name: new RegExp(`^${name}`) })).toBeVisible();
-  const shuruq = prayer.locator('[data-website-sunrise]');
+  await expect(cards).toHaveCount(6);
+  for (const name of ['Fajr', 'Shuruq', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']) await expect(prayer.getByRole('listitem', { name: new RegExp(`^${name}`) })).toBeVisible();
+  const shuruq = prayer.locator('[data-prayer-card="sunrise"]');
   await expect(shuruq).toContainText('Shuruq');
   await expect(shuruq).toContainText('06:58');
   await expect(shuruq).not.toContainText('Iqamah');
@@ -79,7 +79,7 @@ test('display is a themed full-screen TV view with five prayer cards and Shuruq'
 });
 
 for (const route of ['/', '/display/']) {
-  test(`${route} uses consistent glass with only the next salah emphasized`, async ({ page }, testInfo) => {
+  test(`${route} uses consistent glass with only the next salah emphasized`, async ({ page }) => {
     await prayerFixture(page);
     await page.goto(route);
     const root = page.locator(route === '/' ? '#prayer' : '.display-shell');
@@ -96,7 +96,8 @@ for (const route of ['/', '/display/']) {
     for (const style of styles) {
       expect(['none', 'normal']).toContain(style.before);
       expect(style.image).toBe('none');
-      const alpha = Number(style.background.match(/, ([\d.]+)\)$/)?.[1] ?? 1);
+      // Chromium preserves color-mix as color(srgb … / alpha), not rgba().
+      const alpha = Number(style.background.match(/(?:,\s*|\/\s*)([\d.]+)\)$/)?.[1] ?? 1);
       expect(alpha).toBeLessThanOrEqual(.3);
       expect(alpha).toBeGreaterThan(0);
     }
@@ -105,8 +106,7 @@ for (const route of ['/', '/display/']) {
     expect(Math.min(...sizes)).toBeGreaterThanOrEqual(route === '/' ? 24 : 44);
     expect(Math.max(...sizes) / Math.min(...sizes)).toBeLessThan(1.15);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await root.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: `/tmp/openmasjid-${route === '/' ? 'home' : 'display'}-glass-${testInfo.project.name}.png`, fullPage: false });
+    // Capture visuals separately: screenshots can stall with a paused browser clock.
   });
 }
 
